@@ -15,7 +15,7 @@ A solução utiliza dados públicos, estatística, dashboards e algoritmos próp
 
 | Nome | Perfil |
 |---|---|
-| Integrante 1 | LinkedIn |
+| Pedro Augusto da Silva Macedo | [LinkedIn](https://www.linkedin.com/in/pedro-augusto-da-silva-macedo-9a0200187/) |
 | Integrante 2 | LinkedIn |
 | Integrante 3 | LinkedIn |
 | Integrante 4 | LinkedIn |
