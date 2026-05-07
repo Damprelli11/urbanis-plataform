@@ -16,22 +16,11 @@ A solução utiliza dados públicos, estatística, dashboards e algoritmos próp
 | Nome | Perfil |
 |---|---|
 | Pedro Augusto da Silva Macedo | [LinkedIn](https://www.linkedin.com/in/pedro-augusto-da-silva-macedo-9a0200187/) |
-| Integrante 2 | [LinkedIn](https://www.linkedin.com/in/cassio-gama/) |
+| Cassio | [LinkedIn](https://www.linkedin.com/in/cassio-gama/) |
 | Integrante 3 | LinkedIn |
 | Integrante 4 | LinkedIn |
 | Integrante 5 | LinkedIn |
 
----
-
-## 🎓 Orientação
-
-| Nome | Perfil |
-|---|---|
-| Professor Orientador | LinkedIn |
-| Professor da Disciplina | LinkedIn |
-| Professor da Disciplina | LinkedIn |
-
----
 
 ## 📝 Descrição do Projeto
 
