@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import json
+import unicodedata
 
 # =========================
 # CONFIG
@@ -10,6 +12,19 @@ st.set_page_config(
     layout="wide",
     page_icon="📊"
 )
+
+# =========================
+# FUNÇÃO DE NORMALIZAÇÃO
+# =========================
+def normalize_text(text):
+    text = str(text).upper().strip()
+
+    text = ''.join(
+        c for c in unicodedata.normalize('NFD', text)
+        if unicodedata.category(c) != 'Mn'
+    )
+
+    return text
 
 # =========================
 # HEADER
@@ -26,16 +41,30 @@ por meio de indicadores demográficos e análise exploratória de dados.
 # =========================
 # LOAD DATA
 # =========================
-file_path = "estimativa_pop_indicadores_msp.csv"
+file_path = "assets/estimativa_pop_indicadores_msp.csv"
 
 try:
     df = pd.read_csv(
-    file_path,
-    sep=";",
-    encoding="latin1"
-)
+        file_path,
+        sep=";",
+        encoding="latin1"
+    )
+
 except Exception as e:
-    st.error(f"Erro ao carregar arquivo: {e}")
+    st.error(f"Erro ao carregar arquivo CSV: {e}")
+    st.stop()
+
+# =========================
+# LOAD GEOJSON
+# =========================
+geojson_path = "assets/distritos-sp.geojson"
+
+try:
+    with open(geojson_path, "r", encoding="utf-8") as f:
+        geojson_data = json.load(f)
+
+except Exception as e:
+    st.error(f"Erro ao carregar GeoJSON: {e}")
     st.stop()
 
 # =========================
@@ -43,7 +72,7 @@ except Exception as e:
 # =========================
 df.columns = df.columns.str.strip().str.lower()
 
-# Ajuste nomes
+# Renomeia para padrão interno
 df = df.rename(columns={
     "distritos": "nm_dist"
 })
@@ -66,6 +95,11 @@ if missing:
     st.stop()
 
 # =========================
+# NORMALIZA NOMES
+# =========================
+df["nm_dist"] = df["nm_dist"].apply(normalize_text)
+
+# =========================
 # CLEAN NUMBERS
 # =========================
 df["dens_demog"] = (
@@ -85,7 +119,20 @@ df["populacao"] = pd.to_numeric(
     errors="coerce"
 )
 
-df = df.dropna(subset=["dens_demog"])
+df["ano"] = pd.to_numeric(
+    df["ano"],
+    errors="coerce"
+)
+
+# =========================
+# REMOVE NULOS
+# =========================
+df = df.dropna(subset=[
+    "nm_dist",
+    "dens_demog",
+    "populacao",
+    "ano"
+])
 
 # =========================
 # SIDEBAR
@@ -107,7 +154,7 @@ df = df[df["ano"] == ano_escolhido]
 top_n = st.sidebar.slider(
     "Quantidade de distritos",
     5,
-    50,
+    96,
     15
 )
 
@@ -183,7 +230,9 @@ fig = px.bar(
     x="UrbanScore",
     y="nm_dist",
     orientation="h",
-    text="UrbanScore"
+    text="UrbanScore",
+    color="UrbanScore",
+    color_continuous_scale="Viridis"
 )
 
 fig.update_traces(
@@ -204,6 +253,48 @@ st.plotly_chart(
 )
 
 # =========================
+# MAPA INTERATIVO
+# =========================
+st.subheader("🗺️ UrbanScore por Distrito")
+
+fig_map = px.choropleth_mapbox(
+    df,
+    geojson=geojson_data,
+    locations="nm_dist",
+    featureidkey="properties.ds_nome",
+    color="UrbanScore",
+    hover_name="nm_dist",
+    hover_data={
+        "UrbanScore": True,
+        "populacao": True,
+        "dens_demog": True
+    },
+    color_continuous_scale="Viridis",
+    mapbox_style="carto-positron",
+    center={
+        "lat": -23.55,
+        "lon": -46.63
+    },
+    zoom=9,
+    opacity=0.7
+)
+
+fig_map.update_layout(
+    margin={
+        "r": 0,
+        "t": 0,
+        "l": 0,
+        "b": 0
+    },
+    height=800
+)
+
+st.plotly_chart(
+    fig_map,
+    use_container_width=True
+)
+
+# =========================
 # HISTOGRAMA
 # =========================
 st.subheader("📊 Distribuição da Densidade Demográfica")
@@ -211,7 +302,8 @@ st.subheader("📊 Distribuição da Densidade Demográfica")
 fig2 = px.histogram(
     df,
     x="dens_demog",
-    nbins=20
+    nbins=20,
+    color_discrete_sequence=["#440154"]
 )
 
 fig2.update_layout(
@@ -266,8 +358,9 @@ Este modelo:
 - não deve ser utilizado isoladamente para tomada de decisão
 
 ### Fontes
-- IBGE — Censo Demográfico 2022
+- IBGE — Censo Demográfico
 - SEADE — Indicadores Distritais do Município de São Paulo
+- GeoSampa — Limites territoriais dos distritos
 
 ### Natureza da análise
 - exploratória
