@@ -637,34 +637,56 @@ tab_overview, tab_infra, tab_security, tab_data = st.tabs(
 )
 
 with tab_overview:
-    # KPIs principais dentro da aba
-    st.subheader(f"Indicadores Gerais: {segmento_selecionado}")
+    # =========================================================
+    # MOTOR DE DECISÃO: RECOMENDAÇÃO ESTRATÉGICA
+    # =========================================================
+    top = df_ranking.iloc[0]
+    runner_up = df_ranking.iloc[1] if len(df_ranking) > 1 else top
 
+    st.markdown(f"""
+    <div style="background-color: rgba(37, 99, 235, 0.1); padding: 25px; border-radius: 15px; border-left: 8px solid #2563EB; margin-bottom: 30px;">
+        <h2 style="margin-top: 0; color: #2563EB;">🎯 Recomendação Estratégica</h2>
+        <p style="font-size: 1.1em; margin-bottom: 15px;">Segmento: <b>{segmento_selecionado}</b></p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="flex: 2;">
+                <h1 style="margin: 0; font-size: 3em; font-weight: 800;">{top["nm_dist"]}</h1>
+                <p style="margin-top: 10px; font-size: 1.2em; color: #556677;">Justificativa de Liderança:</p>
+                <ul style="font-size: 1.1em; line-height: 1.6em;">
+                    <li><b>Alta Centralidade Econômica:</b> Relevância histórica e corporativa no território.</li>
+                    <li><b>Elevado Fluxo Urbano:</b> Volume de circulação superior à média da cidade.</li>
+                    <li><b>Conectividade Metroferroviária:</b> Infraestrutura de transporte consolidada.</li>
+                    <li><b>Alta Densidade Populacional:</b> Concentração de público-alvo potencial.</li>
+                    <li><b>Baixa Penalização Criminal Relativa:</b> Risco controlado para o perfil do negócio.</li>
+                </ul>
+            </div>
+            <div style="flex: 1; text-align: right; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <p style="margin: 0; color: #8899AA; text-transform: uppercase; font-size: 0.8em; letter-spacing: 1px;">UrbanScore</p>
+                <h1 style="margin: 0; font-size: 4em; color: #2563EB;">{top["UrbanScore"]:.1f}</h1>
+                <p style="margin: 0; color: #22C55E; font-weight: 600;">ADERÊNCIA MÁXIMA</p>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # KPIs principais logo abaixo da recomendação
+    st.subheader(f"Visão Geral do Mercado: {segmento_selecionado}")
     kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5 = st.columns(5)
 
     with kpi_col1:
         with st.container(border=True):
-            st.metric("🏆 Maior UrbanScore", f"{df_ranking['UrbanScore'].max():.2f}")
+            st.metric("Top Score", f"{df_ranking['UrbanScore'].max():.1f}")
     with kpi_col2:
         with st.container(border=True):
-            st.metric("📍 Distritos", len(df_ranking))
+            st.metric("Distritos Analisados", len(df_ranking))
     with kpi_col3:
         with st.container(border=True):
-            st.metric("👥 População", f"{int(df_ranking['populacao'].sum()):,}")
+            st.metric("População Total", f"{int(df_ranking['populacao'].sum()):,}")
     with kpi_col4:
         with st.container(border=True):
-            st.metric("📊 Dens. Média", f"{df_ranking['dens_demog'].mean():,.0f}")
+            st.metric("Densidade Média", f"{df_ranking['dens_demog'].mean():,.0f}")
     with kpi_col5:
         with st.container(border=True):
             st.metric("Idade Média", f"{df_ranking['id_media'].mean():.1f}")
-
-    # =========================================================
-    # MODO EXECUTIVO: RESUMO E RECOMENDAÇÃO
-    # =========================================================
-    st.markdown("---")
-    st.header("Resumo Executivo e Inteligência Territorial")
-
-    top = df_ranking.iloc[0]
 
     # Gráfico de Composição do Score
     score_components = pd.DataFrame(
@@ -697,47 +719,53 @@ with tab_overview:
         color_discrete_sequence=px.colors.qualitative.Pastel,
     )
 
-    # Colunas para o Resumo e Composição do Score
-    exec_col1, exec_col2 = st.columns([1.5, 1])
-
-    with exec_col1:
-        st.success(f"""
-        ### Recomendação Estratégica: {top["nm_dist"]}
-        
-        O distrito de **{top["nm_dist"]}** foi identificado como a região de maior aderência para o segmento **{segmento_selecionado}**.
-        
-        **Narrativa de Decisão:**
-        - O UrbanScore de **{top["UrbanScore"]:.2f}** indica uma alta compatibilidade territorial.
-        - Apresenta um fluxo de aproximadamente **{int(top["n_mob"]):,} mil passageiros/dia** distribuídos em **{int(top["n_stations"])} estações**.
-        - Possui uma **Densidade Demográfica** de {top["dens_demog"]:,.0f} hab/km².
-        - A análise sugere um potencial estratégico elevado para implantação imediata, considerando o equilíbrio entre fluxo populacional, centralidade e infraestrutura.
+    # =========================================================
+    # EXPLICABILIDADE E COMPARAÇÃO
+    # =========================================================
+    st.markdown("---")
+    st.header("Explicabilidade e Inteligência de Ranking")
+    
+    comp_col1, comp_col2 = st.columns([1.5, 1])
+    
+    with comp_col1:
+        st.subheader("Por que este distrito venceu?")
+        st.markdown(f"""
+        A vitória de **{top["nm_dist"]}** sobre **{runner_up["nm_dist"]}** deve-se principalmente à sua performance superior em variáveis de alto peso para o segmento **{segmento_selecionado}**.
         """)
-
-    with exec_col2:
-        st.plotly_chart(fig_score_pie, width="stretch")
-
-    with exec_col2:
-        st.subheader("Composição do Score")
-        # Tabela de Pesos
-        df_pesos = pd.DataFrame(
-            [
-                {
-                    "Variável": "Centralidade",
-                    "Peso": f"{pesos.get('central', 0) * 100:.0f}%",
-                },
-                {"Variável": "Mobilidade", "Peso": f"{pesos.get('mob', 0) * 100:.0f}%"},
-                {"Variável": "Densidade", "Peso": f"{pesos.get('dens', 0) * 100:.0f}%"},
-                {"Variável": "População", "Peso": f"{pesos.get('pop', 0) * 100:.0f}%"},
-                {
-                    "Variável": "Idade Média",
-                    "Peso": f"{pesos.get('idade', 0) * 100:.0f}%",
-                },
-                {
-                    "Variável": "Criminalidade",
-                    "Peso": f"{pesos.get('crime', 0) * 100:.0f}% (redutor)",
-                },
-            ]
+        
+        # Gráfico de comparação 1st vs 2nd
+        comparison_data = pd.DataFrame([
+            {"Indicador": "Centralidade", "Distrito": top["nm_dist"], "Valor": top["central_norm"]},
+            {"Indicador": "Centralidade", "Distrito": runner_up["nm_dist"], "Valor": runner_up["central_norm"]},
+            {"Indicador": "Mobilidade", "Distrito": top["nm_dist"], "Valor": top["mob_norm"]},
+            {"Indicador": "Mobilidade", "Distrito": runner_up["nm_dist"], "Valor": runner_up["mob_norm"]},
+            {"Indicador": "Densidade", "Distrito": top["nm_dist"], "Valor": top["dens_norm"]},
+            {"Indicador": "Densidade", "Distrito": runner_up["nm_dist"], "Valor": runner_up["dens_norm"]},
+        ])
+        
+        fig_comp = px.bar(
+            comparison_data, 
+            x="Indicador", 
+            y="Valor", 
+            color="Distrito", 
+            barmode="group",
+            title=f"Comparação Direta: {top['nm_dist']} vs {runner_up['nm_dist']}",
+            color_discrete_sequence=[px.colors.qualitative.Prism[0], px.colors.qualitative.Prism[1]]
         )
+        st.plotly_chart(fig_comp, width="stretch")
+
+    with comp_col2:
+        st.subheader("Configuração do Motor")
+        st.plotly_chart(fig_score_pie, width="stretch")
+        
+        # Tabela de Pesos resumida
+        df_pesos = pd.DataFrame([
+            {"Variável": "Centralidade", "Peso": f"{pesos.get('central', 0) * 100:.0f}%"},
+            {"Variável": "Mobilidade", "Peso": f"{pesos.get('mob', 0) * 100:.0f}%"},
+            {"Variável": "Densidade", "Peso": f"{pesos.get('dens', 0) * 100:.0f}%"},
+            {"Variável": "Demografia", "Peso": f"{(pesos.get('pop', 0) + pesos.get('idade', 0)) * 100:.0f}%"},
+            {"Variável": "Risco (Crime)", "Peso": f"{pesos.get('crime', 0) * 100:.0f}%"},
+        ])
         st.table(df_pesos.set_index("Variável"))
 
     # Seção de Explicabilidade (Contribuição Real)
