@@ -13,6 +13,93 @@ st.set_page_config(
     page_title="Urbanis: Inteligência Territorial", layout="wide", page_icon="📊"
 )
 
+# =========================================================
+# DESIGN SYSTEM (SaaS STYLE)
+# =========================================================
+st.markdown("""
+    <style>
+    /* Importação de Fonte Moderna */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+    html, body, [class*="css"]  {
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Card de Métricas */
+    [data-testid="stMetricValue"] {
+        font-size: 28px;
+        font-weight: 700;
+        /* Removido color fixo para suportar Dark Theme */
+    }
+    
+    [data-testid="stMetricLabel"] {
+        font-size: 14px;
+        color: #8899AA; /* Cor mais suave e legível em ambos os temas */
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Estilização de Containers (Cards) */
+    .stElementContainer {
+        border-radius: 12px;
+    }
+    
+    div[data-testid="stVerticalBlock"] > div:has(div.element-container) {
+        background-color: transparent;
+    }
+
+    /* Sidebar Customization */
+    [data-testid="stSidebar"] {
+        /* Removido background fixo para respeitar o tema do Streamlit */
+        border-right: 1px solid #33445522;
+    }
+    
+    .sidebar-header {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 20px;
+    }
+
+    /* Estilo para Abas */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 24px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: transparent;
+        border-radius: 4px 4px 0px 0px;
+        gap: 1px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+
+    .stTabs [aria-selected="true"] {
+        border-bottom: 2px solid #2563EB !important;
+        color: #2563EB !important;
+        font-weight: 700;
+    }
+    
+    /* Botões Premium */
+    .stButton>button {
+        width: 100%;
+        border-radius: 8px;
+        height: 3em;
+        background-color: #2563EB;
+        color: white;
+        border: none;
+        transition: all 0.3s;
+    }
+    
+    .stButton>button:hover {
+        background-color: #1D4ED8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 
 # =========================================================
 # FUNÇÃO DE NORMALIZAÇÃO
@@ -31,15 +118,19 @@ def normalize_text(text):
 # =========================================================
 # HEADER
 # =========================================================
-st.title("📊 Urbanis: Inteligência Territorial")
+# =========================================================
+# HEADER COM CARA DE PLATAFORMA
+# =========================================================
+with st.container():
+    col_h1, col_h2 = st.columns([3, 1])
+    with col_h1:
+        st.title("📊 Urbanis AI")
+        st.caption("Territorial Intelligence & Urban Analytics Platform | São Paulo, BR")
+    with col_h2:
+        st.write("") # Espaçador
+        st.button("📄 Exportar Relatório PDF")
 
-st.markdown("""
-### Plataforma de Análise Urbana e Exploração Territorial
-
-A Urbanis é uma plataforma exploratória de análise territorial desenvolvida com dados públicos oficiais do município de São Paulo.
-
-O projeto utiliza técnicas de Big Data, visualização analítica e inteligência territorial para transformar dados urbanos em informações interpretáveis.
-""")
+st.markdown("---")
 
 # =========================================================
 # LOAD DATASET
@@ -377,242 +468,262 @@ df_ranking = df.sort_values(by="UrbanScore", ascending=False).head(top_n)
 df_idade = df.sort_values(by="id_media", ascending=False).head(top_n)
 
 # =========================================================
-# KPIs
+# NAVEGAÇÃO POR ABAS (ESTRUTURA SaaS)
 # =========================================================
-st.subheader(f"📌 Indicadores Gerais: {segmento_selecionado}")
+tab_overview, tab_infra, tab_security, tab_data = st.tabs([
+    "📊 Dashboard Executivo", 
+    "🚇 Mobilidade & Infraestrutura", 
+    "🚨 Segurança Pública", 
+    "📋 Base de Dados & Metodologia"
+])
 
-col1, col2, col3, col4, col5 = st.columns(5)
-
-col1.metric("🏆 Maior UrbanScore", f"{df_ranking['UrbanScore'].max():.2f}")
-
-col2.metric("📍 Distritos analisados", len(df_ranking))
-
-col3.metric("👥 População total", f"{int(df_ranking['populacao'].sum()):,}")
-
-col4.metric("📊 Densidade média", f"{df_ranking['dens_demog'].mean():,.0f}")
-
-col5.metric("👥 Idade média", f"{df_ranking['id_media'].mean():.1f}")
-
-# =========================================================
-# MODO EXECUTIVO: RESUMO E RECOMENDAÇÃO
-# =========================================================
-st.markdown("---")
-st.header("📌 Resumo Executivo & Inteligência de Negócio")
-
-top = df_ranking.iloc[0]
-
-# Gráfico de Composição do Score
-score_components = pd.DataFrame({
-    "Variável": ["Densidade", "Mobilidade", "População", "Idade", "Criminalidade"],
-    "Peso (%)": [
-        pesos["dens"] * 100,
-        pesos["mob"] * 100,
-        pesos["pop"] * 100,
-        pesos["idade"] * 100,
-        abs(pesos["crime"]) * 100
-    ]
-})
-
-fig_score_pie = px.pie(
-    score_components,
-    names="Variável",
-    values="Peso (%)",
-    title=f"🎯 Metodologia de Pesos: {segmento_selecionado}",
-    hole=0.4,
-    color_discrete_sequence=px.colors.qualitative.Pastel
-)
-
-# Colunas para o Resumo e Composição do Score
-exec_col1, exec_col2 = st.columns([1.5, 1])
-
-with exec_col1:
-    st.success(f"""
-    ### 📍 Recomendação Estratégica: {top["nm_dist"]}
+with tab_overview:
+    # KPIs principais dentro da aba
+    st.subheader(f"📌 Indicadores Gerais: {segmento_selecionado}")
     
-    O distrito de **{top["nm_dist"]}** foi identificado como a região de maior aderência para o segmento **{segmento_selecionado}**.
+    kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5 = st.columns(5)
     
-    **Narrativa de Decisão:**
-    - O UrbanScore de **{top["UrbanScore"]:.2f}** indica uma alta compatibilidade territorial.
-    - Apresenta uma robusta **Conectividade Metroferroviária** ({int(top["n_mob"])} estações únicas).
-    - Possui uma **Densidade Demográfica** de {top["dens_demog"]:,.0f} hab/km².
-    - A análise sugere um potencial estratégico elevado para implantação imediata, considerando o equilíbrio entre fluxo populacional e segurança relativa.
-    """)
+    with kpi_col1:
+        with st.container(border=True):
+            st.metric("🏆 Maior UrbanScore", f"{df_ranking['UrbanScore'].max():.2f}")
+    with kpi_col2:
+        with st.container(border=True):
+            st.metric("📍 Distritos", len(df_ranking))
+    with kpi_col3:
+        with st.container(border=True):
+            st.metric("👥 População", f"{int(df_ranking['populacao'].sum()):,}")
+    with kpi_col4:
+        with st.container(border=True):
+            st.metric("📊 Dens. Média", f"{df_ranking['dens_demog'].mean():,.0f}")
+    with kpi_col5:
+        with st.container(border=True):
+            st.metric("👥 Idade Média", f"{df_ranking['id_media'].mean():.1f}")
 
-with exec_col2:
-    st.plotly_chart(fig_score_pie, use_container_width=True)
+    # =========================================================
+    # MODO EXECUTIVO: RESUMO E RECOMENDAÇÃO
+    # =========================================================
+    st.markdown("---")
+    st.header("📌 Resumo Executivo & Inteligência de Negócio")
 
-with exec_col2:
-    st.subheader("🎯 Composição do Score")
-    # Tabela de Pesos
-    df_pesos = pd.DataFrame(
-        [
-            {"Variável": "Mobilidade", "Peso": f"{pesos['mob'] * 100:.0f}%"},
-            {"Variável": "Densidade", "Peso": f"{pesos['dens'] * 100:.0f}%"},
-            {"Variável": "População", "Peso": f"{pesos['pop'] * 100:.0f}%"},
-            {"Variável": "Idade Média", "Peso": f"{pesos['idade'] * 100:.0f}%"},
-            {
-                "Variável": "Criminalidade",
-                "Peso": f"{pesos['crime'] * 100:.0f}% (redutor)",
-            },
+    top = df_ranking.iloc[0]
+
+    # Gráfico de Composição do Score
+    score_components = pd.DataFrame({
+        "Variável": ["Densidade", "Mobilidade", "População", "Idade", "Criminalidade"],
+        "Peso (%)": [
+            pesos["dens"] * 100,
+            pesos["mob"] * 100,
+            pesos["pop"] * 100,
+            pesos["idade"] * 100,
+            abs(pesos["crime"]) * 100
         ]
+    })
+
+    fig_score_pie = px.pie(
+        score_components,
+        names="Variável",
+        values="Peso (%)",
+        title=f"🎯 Metodologia de Pesos: {segmento_selecionado}",
+        hole=0.4,
+        color_discrete_sequence=px.colors.qualitative.Pastel
     )
-    st.table(df_pesos.set_index("Variável"))
 
-# Seção de Explicabilidade (Contribuição Real)
-with st.expander("🔍 Ver Detalhes da Explicabilidade (Contribuição Real no Distrito)"):
-    exp_col1, exp_col2 = st.columns(2)
+    # Colunas para o Resumo e Composição do Score
+    exec_col1, exec_col2 = st.columns([1.5, 1])
 
-    with exp_col1:
-        st.markdown(f"**Performance em {top['nm_dist']} (0 a 1):**")
-        df_contrib = pd.DataFrame(
+    with exec_col1:
+        st.success(f"""
+        ### 📍 Recomendação Estratégica: {top["nm_dist"]}
+        
+        O distrito de **{top["nm_dist"]}** foi identificado como a região de maior aderência para o segmento **{segmento_selecionado}**.
+        
+        **Narrativa de Decisão:**
+        - O UrbanScore de **{top["UrbanScore"]:.2f}** indica uma alta compatibilidade territorial.
+        - Apresenta uma robusta **Conectividade Metroferroviária** ({int(top["n_mob"])} estações únicas).
+        - Possui uma **Densidade Demográfica** de {top["dens_demog"]:,.0f} hab/km².
+        - A análise sugere um potencial estratégico elevado para implantação imediata, considerando o equilíbrio entre fluxo populacional e segurança relativa.
+        """)
+
+    with exec_col2:
+        st.plotly_chart(fig_score_pie, width="stretch")
+
+    with exec_col2:
+        st.subheader("🎯 Composição do Score")
+        # Tabela de Pesos
+        df_pesos = pd.DataFrame(
             [
+                {"Variável": "Mobilidade", "Peso": f"{pesos['mob'] * 100:.0f}%"},
+                {"Variável": "Densidade", "Peso": f"{pesos['dens'] * 100:.0f}%"},
+                {"Variável": "População", "Peso": f"{pesos['pop'] * 100:.0f}%"},
+                {"Variável": "Idade Média", "Peso": f"{pesos['idade'] * 100:.0f}%"},
                 {
-                    "Indicador": "Densidade Normalizada",
-                    "Valor": round(top["dens_norm"], 3),
-                },
-                {
-                    "Indicador": "Mobilidade Normalizada",
-                    "Valor": round(top["mob_norm"], 3),
-                },
-                {
-                    "Indicador": "População Normalizada",
-                    "Valor": round(top["pop_norm"], 3),
-                },
-                {
-                    "Indicador": "Idade Normalizada",
-                    "Valor": round(top["idade_norm"], 3),
-                },
-                {
-                    "Indicador": "Criminalidade Normalizada",
-                    "Valor": round(top["crime_norm"], 3),
+                    "Variável": "Criminalidade",
+                    "Peso": f"{pesos['crime'] * 100:.0f}% (redutor)",
                 },
             ]
         )
-        st.dataframe(df_contrib, hide_index=True, use_container_width=True)
+        st.table(df_pesos.set_index("Variável"))
 
-    with exp_col2:
-        st.info(f"""
-        **Como o score foi construído?**
-        
-        O UrbanScore de **{top["nm_dist"]}** é o resultado da soma ponderada desses 5 indicadores. 
-        A normalização garante que o distrito seja comparado com o melhor e o pior desempenho de toda a cidade de São Paulo dentro do segmento **{segmento_selecionado}**.
-        """)
+    # Seção de Explicabilidade (Contribuição Real)
+    with st.expander("🔍 Ver Detalhes da Explicabilidade (Contribuição Real no Distrito)"):
+        exp_col1, exp_col2 = st.columns(2)
 
-# =========================================================
-# INSIGHTS AUTOMÁTICOS
-# =========================================================
-st.subheader("🔎 Insights Territoriais Adicionais")
-bairro_mais_denso = df.loc[df["dens_demog"].idxmax()]
-bairro_menos_denso = df.loc[df["dens_demog"].idxmin()]
+        with exp_col1:
+            st.markdown(f"**Performance em {top['nm_dist']} (0 a 1):**")
+            df_contrib = pd.DataFrame(
+                [
+                    {
+                        "Indicador": "Densidade Normalizada",
+                        "Valor": round(top["dens_norm"], 3),
+                    },
+                    {
+                        "Indicador": "Mobilidade Normalizada",
+                        "Valor": round(top["mob_norm"], 3),
+                    },
+                    {
+                        "Indicador": "População Normalizada",
+                        "Valor": round(top["pop_norm"], 3),
+                    },
+                    {
+                        "Indicador": "Idade Normalizada",
+                        "Valor": round(top["idade_norm"], 3),
+                    },
+                    {
+                        "Indicador": "Criminalidade Normalizada",
+                        "Valor": round(top["crime_norm"], 3),
+                    },
+                ]
+            )
+            st.dataframe(df_contrib, hide_index=True, width="stretch")
 
-ins_col1, ins_col2 = st.columns(2)
-ins_col1.metric(
-    "Distrito Mais Denso",
-    bairro_mais_denso["nm_dist"],
-    f"{bairro_mais_denso['dens_demog']:,.0f} hab/km²",
-)
-ins_col2.metric(
-    "Distrito Menos Denso",
-    bairro_menos_denso["nm_dist"],
-    f"{bairro_menos_denso['dens_demog']:,.0f} hab/km²",
-)
+        with exp_col2:
+            st.info(f"""
+            **Como o score foi construído?**
+            
+            O UrbanScore de **{top["nm_dist"]}** é o resultado da soma ponderada desses 5 indicadores. 
+            A normalização garante que o distrito seja comparado com o melhor e o pior desempenho de toda a cidade de São Paulo dentro do segmento **{segmento_selecionado}**.
+            """)
 
-# =========================================================
-# GRÁFICO PRINCIPAL
-# =========================================================
-st.subheader("📈 Ranking UrbanScore por Distrito")
+    # =========================================================
+    # INSIGHTS AUTOMÁTICOS
+    # =========================================================
+    st.subheader("🔎 Insights Territoriais Adicionais")
+    bairro_mais_denso = df.loc[df["dens_demog"].idxmax()]
+    bairro_menos_denso = df.loc[df["dens_demog"].idxmin()]
 
-fig = px.bar(
-    df_ranking.sort_values("UrbanScore"),
-    x="UrbanScore",
-    y="nm_dist",
-    orientation="h",
-    text="UrbanScore",
-    color="UrbanScore",
-    color_continuous_scale="Viridis",
-)
+    ins_col1, ins_col2 = st.columns(2)
+    with ins_col1:
+        with st.container(border=True):
+            st.metric(
+                "Distrito Mais Denso",
+                bairro_mais_denso["nm_dist"],
+                f"{bairro_mais_denso['dens_demog']:,.0f} hab/km²",
+            )
+    with ins_col2:
+        with st.container(border=True):
+            st.metric(
+                "Distrito Menos Denso",
+                bairro_menos_denso["nm_dist"],
+                f"{bairro_menos_denso['dens_demog']:,.0f} hab/km²",
+            )
 
-fig.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+    # =========================================================
+    # GRÁFICO PRINCIPAL
+    # =========================================================
+    st.subheader("📈 Ranking UrbanScore por Distrito")
 
-fig.update_layout(
-    height=max(700, top_n * 35),
-    xaxis_title="UrbanScore",
-    yaxis_title="Distrito",
-    showlegend=False,
-)
+    fig = px.bar(
+        df_ranking.sort_values("UrbanScore"),
+        x="UrbanScore",
+        y="nm_dist",
+        orientation="h",
+        text="UrbanScore",
+        color="UrbanScore",
+        color_continuous_scale="Viridis",
+    )
 
-st.plotly_chart(fig, use_container_width=True)
+    fig.update_traces(texttemplate="%{text:.2f}", textposition="outside")
 
-# =========================================================
-# MAPA INTERATIVO
-# =========================================================
-st.subheader("🗺️ Distribuição Territorial do UrbanScore")
+    fig.update_layout(
+        height=max(700, top_n * 35),
+        xaxis_title="UrbanScore",
+        yaxis_title="Distrito",
+        showlegend=False,
+    )
 
-fig_map = px.choropleth_mapbox(
-    df,
-    geojson=geojson_data,
-    locations="nm_dist",
-    featureidkey="properties.ds_nome",
-    color="UrbanScore",
-    hover_name="nm_dist",
-    hover_data={
-        "UrbanScore": True,
-        "populacao": True,
-        "dens_demog": True,
-        "id_media": True,
-    },
-    color_continuous_scale="Viridis",
-    mapbox_style="carto-positron",
-    center={"lat": -23.55, "lon": -46.63},
-    zoom=9,
-    opacity=0.75,
-)
+    st.plotly_chart(fig, width="stretch")
 
-fig_map.update_layout(height=800, margin={"r": 0, "t": 0, "l": 0, "b": 0})
+    # =========================================================
+    # MAPA INTERATIVO
+    # =========================================================
+    st.subheader("🗺️ Distribuição Territorial do UrbanScore")
 
-st.plotly_chart(fig_map, use_container_width=True)
-
-# =========================================================
-# NOVA SEÇÃO: INFRAESTRUTURA METROFERROVIÁRIA
-# =========================================================
-st.subheader("🚇 Infraestrutura Metroferroviária")
-
-# KPIs de Mobilidade
-m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-m_col1.metric("Total de Integrações", total_est)
-m_col2.metric("Maior Conectividade", f"{top_dist} ({top_val})")
-m_col3.metric("Pontos de Metrô", total_m)
-m_col4.metric("Pontos de Trem", total_t)
-
-st.info(
-    "💡 **Nota sobre Conectividade:** A contagem de integrações reflete todos os pontos de acesso e conexões de linhas dentro do território do distrito. Distritos com estações de integração (ex: Ana Rosa, Santa Cruz) apresentam números maiores pois cada linha é contabilizada como um ponto de conectividade."
-)
-
-if not df_transporte.empty:
-    fig_transp = px.scatter_mapbox(
-        df_transporte,
-        lat="latitude",
-        lon="longitude",
-        color="tipo",
-        hover_name="estacao",
-        hover_data={"tipo": True, "latitude": False, "longitude": False},
-        color_discrete_map={"Metrô": "blue", "Trem": "red"},
-        mapbox_style="carto-positron",
+    fig_map = px.choropleth_map(
+        df,
+        geojson=geojson_data,
+        locations="nm_dist",
+        featureidkey="properties.ds_nome",
+        color="UrbanScore",
+        hover_name="nm_dist",
+        hover_data={
+            "UrbanScore": True,
+            "populacao": True,
+            "dens_demog": True,
+            "id_media": True,
+        },
+        color_continuous_scale="Viridis",
+        map_style="carto-positron",
         center={"lat": -23.55, "lon": -46.63},
-        zoom=10,
+        zoom=9,
+        opacity=0.75,
     )
 
-    fig_transp.update_layout(
-        height=600,
-        margin={"r": 0, "t": 0, "l": 0, "b": 0},
-        legend=dict(
-            title="Tipo de Estação", yanchor="top", y=0.99, xanchor="left", x=0.01
-        ),
+    fig_map.update_layout(height=800, margin={"r": 0, "t": 0, "l": 0, "b": 0})
+
+    st.plotly_chart(fig_map, width="stretch")
+
+with tab_infra:
+    # =========================================================
+    # NOVA SEÇÃO: INFRAESTRUTURA METROFERROVIÁRIA
+    # =========================================================
+    st.subheader("🚇 Infraestrutura Metroferroviária")
+
+    # KPIs de Mobilidade
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    m_col1.metric("Total de Integrações", total_est)
+    m_col2.metric("Maior Conectividade", f"{top_dist} ({top_val})")
+    m_col3.metric("Pontos de Metrô", total_m)
+    m_col4.metric("Pontos de Trem", total_t)
+
+    st.info(
+        "💡 **Nota sobre Conectividade:** A contagem de integrações reflete todos os pontos de acesso e conexões de linhas dentro do território do distrito. Distritos com estações de integração (ex: Ana Rosa, Santa Cruz) apresentam números maiores pois cada linha é contabilizada como um ponto de conectividade."
     )
 
-    st.plotly_chart(fig_transp, use_container_width=True)
-else:
-    st.info("Dados de infraestrutura metroferroviária não disponíveis.")
+    if not df_transporte.empty:
+        fig_transp = px.scatter_map(
+            df_transporte,
+            lat="latitude",
+            lon="longitude",
+            color="tipo",
+            hover_name="estacao",
+            hover_data={"tipo": True, "latitude": False, "longitude": False},
+            color_discrete_map={"Metrô": "blue", "Trem": "red"},
+            map_style="carto-positron",
+            center={"lat": -23.55, "lon": -46.63},
+            zoom=10,
+        )
+
+        fig_transp.update_layout(
+            height=600,
+            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+            legend=dict(
+                title="Tipo de Estação", yanchor="top", y=0.99, xanchor="left", x=0.01
+            ),
+        )
+
+        st.plotly_chart(fig_transp, width="stretch")
+    else:
+        st.info("Dados de infraestrutura metroferroviária não disponíveis.")
 
 # =========================================================
 # IDADE MÉDIA
@@ -632,7 +743,7 @@ fig3.update_layout(
     height=max(700, top_n * 35), xaxis_title="Idade Média", yaxis_title="Distrito"
 )
 
-st.plotly_chart(fig3, use_container_width=True)
+st.plotly_chart(fig3, width="stretch")
 
 # =========================================================
 # SCATTER
@@ -653,276 +764,111 @@ fig4.update_layout(
     height=700, xaxis_title="Densidade Demográfica", yaxis_title="População"
 )
 
-st.plotly_chart(fig4, use_container_width=True)
+st.plotly_chart(fig4, width="stretch")
 
-# =========================================================
-# BASE CRIMINAL
-# =========================================================
-crime_file = "assets/01 - DADOS CRIMINAIS_JAN_2025_V2.xlsx"
+with tab_security:
+    # =========================================================
+    # BASE CRIMINAL
+    # =========================================================
+    crime_file = "assets/01 - DADOS CRIMINAIS_JAN_2025_V2.xlsx"
 
-try:
-    df_crime = pd.read_excel(crime_file)
+    try:
+        df_crime = pd.read_excel(crime_file)
+        df_crime.columns = df_crime.columns.astype(str).str.strip().str.lower()
 
-    # -----------------------------------------------------
-    # PADRONIZA COLUNAS
-    # -----------------------------------------------------
-    df_crime.columns = df_crime.columns.astype(str).str.strip().str.lower()
+        if "dp" in df_crime.columns:
+            df_crime["nm_dist"] = (
+                df_crime["dp"].astype(str).str.replace(r"^\d+\s*DP\s*-\s*", "", regex=True)
+            )
+            df_crime["nm_dist"] = df_crime["nm_dist"].apply(normalize_text)
+            df_crime_grouped = (
+                df_crime.groupby("nm_dist")["2025"]
+                .sum()
+                .reset_index(name="total_ocorrencias")
+            )
 
-    # -----------------------------------------------------
-    # VALIDA COLUNA DP
-    # -----------------------------------------------------
-    if "dp" in df_crime.columns:
-        # -------------------------------------------------
-        # REMOVE PREFIXO "001 DP - "
-        # -------------------------------------------------
-        df_crime["nm_dist"] = (
-            df_crime["dp"].astype(str).str.replace(r"^\d+\s*DP\s*-\s*", "", regex=True)
-        )
+            df_crime_merge = df.merge(df_crime_grouped, on="nm_dist", how="left")
+            df_crime_merge["total_ocorrencias"] = df_crime_merge["total_ocorrencias"].fillna(0)
 
-        # -------------------------------------------------
-        # NORMALIZA
-        # -------------------------------------------------
-        df_crime["nm_dist"] = df_crime["nm_dist"].apply(normalize_text)
+            st.subheader("🚨 Ocorrências Criminais por Distrito (Janeiro/2025)")
 
-        # -------------------------------------------------
-        # AGRUPA
-        # -------------------------------------------------
-        df_crime_grouped = (
-            df_crime.groupby("nm_dist")["2025"]
-            .sum()
-            .reset_index(name="total_ocorrencias")
-        )
+            df_crime_chart = df_crime_merge.sort_values(
+                by="total_ocorrencias", ascending=False
+            ).head(top_n)
 
-        # -------------------------------------------------
-        # MERGE
-        # -------------------------------------------------
-        df_crime_merge = df.merge(df_crime_grouped, on="nm_dist", how="left")
-
-        df_crime_merge["total_ocorrencias"] = df_crime_merge[
-            "total_ocorrencias"
-        ].fillna(0)
-
-        # =================================================
-        # GRÁFICO CRIMINALIDADE
-        # =================================================
-        st.subheader("🚨 Ocorrências Criminais por Distrito (Janeiro/2025)")
-
-        df_crime_chart = df_crime_merge.sort_values(
-            by="total_ocorrencias", ascending=False
-        ).head(top_n)
-
-        fig_crime = px.bar(
-            df_crime_chart.sort_values("total_ocorrencias"),
-            x="total_ocorrencias",
-            y="nm_dist",
-            orientation="h",
-            text="total_ocorrencias",
-            color="total_ocorrencias",
-            color_continuous_scale="Reds",
-        )
-
-        fig_crime.update_traces(textposition="outside")
-
-        fig_crime.update_layout(
-            height=max(700, top_n * 35),
-            xaxis_title="Quantidade de Ocorrências",
-            yaxis_title="Distrito",
-            showlegend=False,
-        )
-
-        st.plotly_chart(fig_crime, use_container_width=True)
-
-        # =========================================================
-        # MAPA DE CRIMINALIDADE
-        # =========================================================
-        if "total_ocorrencias" in df_crime_merge.columns:
-            st.subheader("🗺️ Distribuição Territorial da Criminalidade")
-
-            # -----------------------------------------------------
-            # NORMALIZA NOMES NO GEOJSON
-            # -----------------------------------------------------
-            for feature in geojson_data["features"]:
-                feature["properties"]["ds_nome"] = normalize_text(
-                    feature["properties"]["ds_nome"]
-                )
-
-            # -----------------------------------------------------
-            # MERGE CORRIGIDO
-            # -----------------------------------------------------
-            df_crime_map = df_crime_merge.copy()
-
-            df_crime_map["feature_name"] = df_crime_map["nm_dist"]
-
-            # -----------------------------------------------------
-            # MAPA
-            # -----------------------------------------------------
-            fig_crime_map = px.choropleth_mapbox(
-                df_crime_map,
-                geojson=geojson_data,
-                locations="feature_name",
-                featureidkey="properties.ds_nome",
+            fig_crime = px.bar(
+                df_crime_chart.sort_values("total_ocorrencias"),
+                x="total_ocorrencias",
+                y="nm_dist",
+                orientation="h",
+                text="total_ocorrencias",
                 color="total_ocorrencias",
-                hover_name="nm_dist",
-                hover_data={
-                    "total_ocorrencias": True,
-                    "UrbanScore": True,
-                    "populacao": True,
-                },
                 color_continuous_scale="Reds",
-                mapbox_style="carto-positron",
-                center={"lat": -23.55, "lon": -46.63},
-                zoom=9,
-                opacity=0.75,
             )
+            fig_crime.update_traces(textposition="outside")
+            fig_crime.update_layout(height=max(700, top_n * 35), showlegend=False)
+            st.plotly_chart(fig_crime, width="stretch")
 
-            fig_crime_map.update_layout(
-                height=800, margin={"r": 0, "t": 0, "l": 0, "b": 0}
-            )
+            if "total_ocorrencias" in df_crime_merge.columns:
+                st.subheader("🗺️ Distribuição Territorial da Criminalidade")
+                for feature in geojson_data["features"]:
+                    feature["properties"]["ds_nome"] = normalize_text(feature["properties"]["ds_nome"])
 
-            st.plotly_chart(fig_crime_map, use_container_width=True)
-        # =================================================
-        # INSIGHT CRIMINAL
-        # =================================================
-        if not df_crime_chart.empty:
-            distrito_mais_ocorrencias = df_crime_chart.iloc[0]
+                fig_crime_map = px.choropleth_map(
+                    df_crime_merge,
+                    geojson=geojson_data,
+                    locations="nm_dist",
+                    featureidkey="properties.ds_nome",
+                    color="total_ocorrencias",
+                    hover_name="nm_dist",
+                    color_continuous_scale="Reds",
+                    map_style="carto-positron",
+                    center={"lat": -23.55, "lon": -46.63},
+                    zoom=9,
+                    opacity=0.75,
+                )
+                fig_crime_map.update_layout(height=800, margin={"r": 0, "t": 0, "l": 0, "b": 0})
+                st.plotly_chart(fig_crime_map, width="stretch")
 
-            st.warning(f"""
-            ### 🚨 Estudo Exploratório de Criminalidade
+            if not df_crime_chart.empty:
+                distrito_mais_ocorrencias = df_crime_chart.iloc[0]
+                st.warning(f"**Insight:** O distrito de **{distrito_mais_ocorrencias['nm_dist']}** registrou **{int(distrito_mais_ocorrencias['total_ocorrencias'])}** ocorrências em Jan/2025.")
 
-            - Distrito com maior número de ocorrências:
-              **{distrito_mais_ocorrencias["nm_dist"]}**
+    except Exception as e:
+        st.info("Módulo de criminalidade em manutenção.")
 
-            - Total de ocorrências:
-              **{int(distrito_mais_ocorrencias["total_ocorrencias"])}**
+with tab_data:
+    # =========================================================
+    # TABELA E METODOLOGIA
+    # =========================================================
+    st.subheader("📋 Dados Consolidados & Metodologia")
+    
+    with st.container(border=True):
+        st.dataframe(
+            df_ranking[["nm_dist", "populacao", "dens_demog", "id_media", "UrbanScore"]]
+            .sort_values(by="UrbanScore", ascending=False),
+            width="stretch",
+        )
 
-            ⚠️ Dados referentes apenas ao mês de janeiro de 2025.
+    with st.expander("🌍 Impacto Social e Econômico"):
+        st.markdown("""
+        A Urbanis utiliza Big Data para democratizar o acesso a indicadores urbanos, permitindo uma visão clara sobre densidade, conectividade e segurança.
+        
+        - Apoio à tomada de decisão estratégica.
+        - Visualização de desigualdades territoriais.
+        - Suporte a estudos de expansão urbana.
+        """)
 
-            A associação entre DPs e distritos administrativos
-            foi realizada por aproximação nominal.
-            """)
-
-except Exception as e:
-    st.warning(f"""
-    Não foi possível carregar a base criminal.
-
-    Erro:
-    {e}
-    """)
-
-
-# =========================================================
-# TABELA
-# =========================================================
-st.subheader("📋 Dados Consolidados")
-
-st.dataframe(
-    df_ranking[
-        ["nm_dist", "populacao", "dens_demog", "id_media", "UrbanScore"]
-    ].sort_values(by="UrbanScore", ascending=False),
-    use_container_width=True,
-)
-
-# =========================================================
-# IMPACTO SOCIAL E ECONÔMICO
-# =========================================================
-st.markdown("""
----
-
-# 🌍 Impacto Social e Econômico da Urbanis
-
-A Urbanis propõe uma abordagem orientada a dados para apoiar análises urbanas e territoriais no município de São Paulo.
-
-A plataforma integra indicadores demográficos, espaciais e exploratórios de segurança pública para permitir interpretações mais amplas sobre dinâmicas urbanas, distribuição populacional e concentração territorial de ocorrências.
-
-Por meio da combinação entre visualização geográfica e análise estatística, o projeto busca transformar dados públicos em informações acessíveis para apoio exploratório à tomada de decisão.
-
-## Impacto Social
-
-- democratização do acesso a dados urbanos públicos
-- facilitação da interpretação territorial de indicadores sociais
-- apoio à visualização espacial de desigualdades urbanas
-- exploração de padrões territoriais relacionados à segurança pública
-- incentivo à cultura de dados e transparência urbana
-
-A integração exploratória de ocorrências criminais permite observar como diferentes regiões apresentam dinâmicas urbanas distintas, possibilitando análises espaciais complementares sobre infraestrutura, densidade populacional e concentração de registros policiais.
-
-## Impacto Econômico
-
-- apoio exploratório para estudos territoriais
-- suporte inicial para análise de expansão urbana
-- identificação de regiões com alta concentração populacional
-- visualização espacial de áreas com maior incidência de ocorrências registradas
-- auxílio preliminar para análises de localização e inteligência territorial
-
-A análise integrada entre densidade demográfica, UrbanScore e ocorrências criminais possibilita compreender padrões urbanos que podem influenciar estudos acadêmicos, planejamento territorial e avaliações exploratórias de regiões urbanas.
-
-## Aplicação prática
-
-A Urbanis pode ser utilizada como ferramenta acadêmica e exploratória para:
-
-- análise territorial urbana
-- estudos espaciais exploratórios
-- visualização geográfica de indicadores públicos
-- apoio inicial à interpretação de dados urbanos
-- experimentação em projetos de Big Data e Ciência de Dados
-
-## Segurança Pública e Territorialidade
-
-O módulo de criminalidade incorporado ao projeto utiliza dados públicos da SSP-SP referentes ao mês de janeiro de 2025.
-
-Os registros foram associados aos distritos administrativos por aproximação nominal entre Delegacias de Polícia (DPs) e distritos territoriais.
-
-O objetivo do módulo não é realizar previsão criminal ou classificação de risco, mas permitir visualizações exploratórias sobre distribuição espacial de ocorrências no território urbano.
-
----
-""")
-
-# =========================================================
-# METODOLOGIA
-# =========================================================
-st.markdown("""
-# 📘 Metodologia
-
-O UrbanScore é um indicador exploratório desenvolvido para representar padrões urbanos a partir de dados públicos oficiais.
-
-## Estrutura do indicador
-- 50% densidade demográfica normalizada
-- 50% componente simplificado de infraestrutura urbana
-
-## Objetivo
-Demonstrar como técnicas de Big Data e análise de dados podem apoiar interpretações territoriais e visualizações urbanas.
-
-## Tecnologias utilizadas
-- Python
-- Streamlit
-- Plotly
-- Pandas
-
-## Fontes de Dados
-- IBGE — Censo Demográfico
-- SEADE — Indicadores Distritais do Município de São Paulo
-- GeoSampa — Limites territoriais dos distritos
-- SSP-SP — Ocorrências Criminais (jan/2025)
-
-## Próximas expansões planejadas
-- renda média por distrito
-- indicadores históricos de segurança pública
-- mobilidade urbana
-- análise multicritério
-- score segmentado por atividade econômica
-
-## Limitações
-Este modelo:
-- não possui finalidade preditiva
-- não representa índice oficial
-- não considera renda ou atividade econômica
-- utiliza abordagem exploratória simplificada
-- utiliza aproximação entre DPs e distritos administrativos
-
-## Natureza da análise
-- exploratória
-- descritiva
-- acadêmica
-
----
-""")
+    with st.expander("📘 Detalhes da Metodologia"):
+        st.markdown("""
+        **UrbanScore v2.0**
+        
+        O indicador é adaptativo e ponderado conforme o segmento de negócio escolhido:
+        1. **Normalização**: Todos os dados são escalonados (0-1).
+        2. **Ponderação**: Pesos específicos são aplicados (ex: Restaurantes valorizam fluxo e mobilidade).
+        3. **Escalonamento**: O score final é projetado em uma escala de 0 a 100.
+        
+        *Fontes: IBGE, SEADE, GeoSampa, SSP-SP.*
+        """)
+    
+    st.caption("Urbanis Intel Platform | Professional Edition 2025")
