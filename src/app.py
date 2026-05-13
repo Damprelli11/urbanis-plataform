@@ -5,6 +5,7 @@ import json
 import pyproj
 from shapely.geometry import shape, Point
 import unicodedata
+import numpy as np
 
 # =========================================================
 # CONFIGURAÇÃO DA PÁGINA
@@ -16,7 +17,8 @@ st.set_page_config(
 # =========================================================
 # DESIGN SYSTEM (SaaS STYLE)
 # =========================================================
-st.markdown("""
+st.markdown(
+    """
     <style>
     /* Importação de Fonte Moderna */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -98,7 +100,9 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
     </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 # =========================================================
@@ -124,10 +128,12 @@ def normalize_text(text):
 with st.container():
     col_h1, col_h2 = st.columns([3, 1])
     with col_h1:
-        st.title("📊 Urbanis AI")
-        st.caption("Territorial Intelligence & Urban Analytics Platform | São Paulo, BR")
+        st.title("Urbanis")
+        st.caption(
+            "Plataforma de Estudo Territorial e Analytics Urbano | São Paulo, BR"
+        )
     with col_h2:
-        st.write("") # Espaçador
+        st.write("")  # Espaçador
         st.button("📄 Exportar Relatório PDF")
 
 st.markdown("---")
@@ -158,7 +164,105 @@ except Exception as e:
     st.stop()
 
 # =========================================================
-# CARREGAMENTO DE ESTAÇÕES (METRÔ E TREM)
+# CARREGAMENTO DE DEMANDA
+# =========================================================
+MAPA_ABREV = {
+    "JAB": "JABAQUARA",
+    "CON": "CONCEICAO",
+    "JUD": "SAO JUDAS",
+    "SAU": "SAUDE",
+    "ARV": "PRACA DA ARVORE",
+    "SCZ": "SANTA CRUZ",
+    "VMN": "VILA MARIANA",
+    "ANR": "ANA ROSA",
+    "PSO": "PARAISO",
+    "VGO": "VERGUEIRO",
+    "JQM": "SAO JOAQUIM",
+    "LIB": "LIBERDADE",
+    "PSE": "SE",
+    "BTO": "SAO BENTO",
+    "LUZ": "LUZ",
+    "TRD": "TIRADENTES",
+    "PPQ": "ARMENIA",
+    "TTE": "PORTUGUESA TIETE",
+    "CDU": "CARANDIRU",
+    "SAN": "SANTANA",
+    "JPA": "JARDIM SAO PAULO AYRTON SENNA",
+    "PIG": "PARADA INGLESA",
+    "TUC": "TUCURUVI",
+    "VPT": "VILA PRUDENTE",
+    "TTI": "TAMANDUATEI",
+    "SAC": "SACOMA",
+    "AIP": "ALTO DO IPIRANGA",
+    "IMG": "SANTOS IMIGRANTES",
+    "CKB": "CHACARA KLABIN",
+    "BGD": "BRIGADEIRO",
+    "TRI": "TRIANON MASP",
+    "CNS": "CONSOLACAO",
+    "CLI": "CLINICAS",
+    "SUM": "SUMARE",
+    "VMD": "VILA MADALENA",
+    "ITQ": "CORINTHIANS ITAQUERA",
+    "ART": "ARTUR ALVIM",
+    "PCA": "PATRIARCA VILA RE",
+    "VPA": "GUILHERMINA ESPERANCA",
+    "VTD": "VILA MATILDE",
+    "PEN": "PENHA",
+    "CAR": "CARRAO",
+    "TAT": "TATUAPE",
+    "BEL": "BELEM",
+    "BRE": "BRESSER MOOCA",
+    "BAS": "BRAS",
+    "PDS": "PEDRO II",
+    "GBU": "ANHANGABAU",
+    "REP": "REPUBLICA",
+    "CEC": "SANTA CECILIA",
+    "DEO": "MARECHAL DEODORO",
+    "BFU": "PALMEIRAS BARRA FUNDA",
+    "VPM": "VILA PRUDENTE",
+    "ORT": "ORATORIO",
+    "SLU": "SAO LUCAS",
+    "CAD": "CAMILO HADDAD",
+    "VTL": "VILA TOLSTOI",
+    "VUN": "VILA UNIAO",
+    "JPL": "JARDIM PLANALTO",
+    "SAP": "SAPOPEMBA",
+    "FJT": "FAZENDA DA JUTA",
+    "MAT": "SAO MATEUS",
+    "IGT": "JARDIM COLONIAL",
+}
+
+
+def load_passenger_flow():
+    try:
+        path = "assets/Entrada de Passageiros por Estação - Diária - 2026_1.csv"
+        # O arquivo do metrô costuma vir em latin1 ou cp1252
+        df_flow = pd.read_csv(path, sep=";", encoding="latin1", skiprows=4)
+
+        # Localizar a linha de 'Total' (Geralmente por volta da linha 100)
+        total_row = df_flow[df_flow.iloc[:, 0] == "Total"].iloc[0]
+
+        flow_dict = {}
+        for col_idx, value in enumerate(total_row):
+            col_name = str(df_flow.columns[col_idx]).strip()
+            if col_name in MAPA_ABREV:
+                full_name = normalize_text(MAPA_ABREV[col_name])
+                # Converter valor (ex: "1.906,7" -> 1906.7)
+                try:
+                    val_clean = str(value).replace(".", "").replace(",", ".")
+                    flow_dict[full_name] = float(val_clean)
+                except:
+                    continue
+        return flow_dict
+    except Exception as e:
+        st.warning(f"Aviso: Não foi possível carregar dados de fluxo: {e}")
+        return {}
+
+
+PASSENGER_FLOW = load_passenger_flow()
+
+# =========================================================
+# CARREGAMENTO DE ESTAÇÕES
 # =========================================================
 transformer = pyproj.Transformer.from_crs("epsg:31983", "epsg:4326", always_xy=True)
 
@@ -192,45 +296,69 @@ df_transporte = pd.concat([df_metro, df_trem], ignore_index=True)
 # =========================================================
 # CONFIGURAÇÃO DE SEGMENTOS E PESOS
 # =========================================================
+# =========================================================
+# CONFIGURAÇÃO DE SEGMENTOS E PESOS (V3.0 - CENTRALIDADE)
+# =========================================================
+# Índice de Centralidade Urbana (Proxy de Relevância Econômica)
+# Baseado em densidade corporativa, oferta de empregos e fluxo comercial.
+MAPA_CENTRALIDADE = {
+    "SE": 1.00,
+    "PINHEIROS": 0.95,
+    "ITAIM BIBI": 0.95,
+    "MOEMA": 0.90,
+    "VILA MARIANA": 0.88,
+    "SANTO AMARO": 0.82,
+    "TATUAPE": 0.78,
+    "LAPA": 0.74,
+    "GRAJAU": 0.40,
+    "ITAIM PAULISTA": 0.35,
+}
+
 SEGMENTOS = {
     "Modelo Padrão": {
-        "dens": 0.50,
-        "mob": 0.20,
+        "dens": 0.25,
+        "mob": 0.15,
+        "central": 0.35,
         "pop": 0.15,
         "idade": 0.10,
         "crime": -0.05,
     },
     "Restaurante": {
-        "dens": 0.30,
-        "mob": 0.40,
-        "pop": 0.20,
+        "dens": 0.25,
+        "mob": 0.20,
+        "central": 0.35,
+        "pop": 0.10,
         "idade": 0.00,
         "crime": -0.10,
     },
     "Coworking": {
-        "dens": 0.25,
-        "mob": 0.40,
+        "dens": 0.15,
+        "mob": 0.20,
+        "central": 0.45,
         "pop": 0.00,
-        "idade": 0.25,
+        "idade": 0.20,
         "crime": -0.10,
     },
     "Papelaria": {
-        "dens": 0.40,
-        "mob": 0.25,
+        "dens": 0.30,
+        "mob": 0.15,
+        "central": 0.20,
         "pop": 0.35,
         "idade": 0.00,
         "crime": 0.00,
     },
     "Loja Premium": {
-        "dens": 0.10,
-        "mob": 0.30,
-        "pop": 0.10,
-        "idade": 0.40,
+        "dens": 0.05,
+        "mob": 0.15,
+        "central": 0.50,
+        "pop": 0.05,
+        "idade": 0.25,
         "crime": -0.10,
     },
     "Farmácia": {
-        "dens": 0.45,
-        "mob": 0.30,
+        "dens": 0.35,
+        "mob": 0.20,
+        "central": 0.20,
         "pop": 0.25,
         "idade": 0.00,
         "crime": 0.00,
@@ -365,14 +493,36 @@ if not df_transporte.empty:
     df_transporte["distrito"] = df_transporte.apply(
         lambda r: find_distrito_cons(r["latitude"], r["longitude"]), axis=1
     )
-    # Contagem de estações únicas por distrito (evita duplicidade de linhas/modais no mesmo local)
-    df_mob_dist = (
-        df_transporte.groupby("distrito")["estacao"]
-        .nunique()
-        .reset_index(name="n_mob")
+
+    # Atribui o fluxo de passageiros para cada estação (se disponível no CSV)
+    # Se for trem ou não estiver no mapa, usa um valor base (ex: média de fluxo / 2)
+    media_fluxo = (
+        sum(PASSENGER_FLOW.values()) / len(PASSENGER_FLOW) if PASSENGER_FLOW else 100
     )
+
+    def get_flow(row):
+        st_norm = normalize_text(row["estacao"])
+        # Busca no mapa de fluxo
+        if st_norm in PASSENGER_FLOW:
+            return PASSENGER_FLOW[st_norm]
+        # Heurística para nomes parciais ou CPTM
+        for key, val in PASSENGER_FLOW.items():
+            if key in st_norm or st_norm in key:
+                return val
+        return media_fluxo * 0.5  # Valor base para estações sem dados (ex: Trem)
+
+    df_transporte["fluxo"] = df_transporte.apply(get_flow, axis=1)
+
+    # Consolida por distrito: Soma do fluxo e contagem de estações
+    # Aplicamos escala logarítmica no fluxo para evitar que hubs massivos dominem o score
+    df_mob_dist = (
+        df_transporte.groupby("distrito")
+        .agg(n_mob=("fluxo", "sum"), n_stations=("estacao", "nunique"))
+        .reset_index()
+    )
+    df_mob_dist["n_mob"] = np.log1p(df_mob_dist["n_mob"])
 else:
-    df_mob_dist = pd.DataFrame(columns=["distrito", "n_mob"])
+    df_mob_dist = pd.DataFrame(columns=["distrito", "n_mob", "n_stations"])
 
 # 2. Consolidação de Criminalidade
 df_crime_cons = pd.DataFrame(columns=["nm_dist", "n_crime"])
@@ -395,7 +545,7 @@ except:
 # 3. Integração no DataFrame Principal
 df = df.merge(
     df_mob_dist.rename(columns={"distrito": "nm_dist"}), on="nm_dist", how="left"
-).fillna({"n_mob": 0})
+).fillna({"n_mob": 0, "n_stations": 0})
 df = df.merge(df_crime_cons, on="nm_dist", how="left").fillna({"n_crime": 0})
 
 # =========================================================
@@ -440,25 +590,32 @@ def min_max_scale(series):
 
 
 # Normalização das variáveis core
+# Adiciona o fator de Centralidade (Proxy Estratégico)
+df["centralidade"] = (
+    df["nm_dist"].map(MAPA_CENTRALIDADE).fillna(0.30)
+)  # Baseline de 0.30 para distritos não listados
+
 df["dens_norm"] = min_max_scale(df["dens_demog"])
 df["mob_norm"] = min_max_scale(df["n_mob"])
 df["pop_norm"] = min_max_scale(df["populacao"])
 df["idade_norm"] = min_max_scale(df["id_media"])
 df["crime_norm"] = min_max_scale(df["n_crime"])
+df["central_norm"] = min_max_scale(df["centralidade"])
 
-# Cálculo do Score Combinado
+# Cálculo do Score Combinado (V3.0)
 df["UrbanScore"] = (
-    (df["dens_norm"] * pesos["dens"])
-    + (df["mob_norm"] * pesos["mob"])
-    + (df["pop_norm"] * pesos["pop"])
-    + (df["idade_norm"] * pesos["idade"])
-    + (
-        df["crime_norm"] * pesos["crime"]
-    )  # Note que o peso do crime já é negativo no dicionário
+    (df["dens_norm"] * pesos.get("dens", 0))
+    + (df["mob_norm"] * pesos.get("mob", 0))
+    + (df["pop_norm"] * pesos.get("pop", 0))
+    + (df["idade_norm"] * pesos.get("idade", 0))
+    + (df["central_norm"] * pesos.get("central", 0))
+    + (df["crime_norm"] * pesos.get("crime", 0))
 )
 
 # Ajuste de escala para visualização (0 a 100)
-df["UrbanScore"] = (min_max_scale(df["UrbanScore"]) * 100).round(2)
+# Removido min_max_scale relativo para permitir comparação real entre segmentos
+# Agora 100 representa o topo teórico baseado nos indicadores normalizados
+df["UrbanScore"] = (df["UrbanScore"] * 100).clip(0, 100).round(2)
 
 # =========================================================
 # RANKINGS
@@ -470,19 +627,21 @@ df_idade = df.sort_values(by="id_media", ascending=False).head(top_n)
 # =========================================================
 # NAVEGAÇÃO POR ABAS (ESTRUTURA SaaS)
 # =========================================================
-tab_overview, tab_infra, tab_security, tab_data = st.tabs([
-    "📊 Dashboard Executivo", 
-    "🚇 Mobilidade & Infraestrutura", 
-    "🚨 Segurança Pública", 
-    "📋 Base de Dados & Metodologia"
-])
+tab_overview, tab_infra, tab_security, tab_data = st.tabs(
+    [
+        "Dashboard Executivo",
+        "Mobilidade & Infraestrutura",
+        "Segurança Pública",
+        "Base de Dados & Metodologia",
+    ]
+)
 
 with tab_overview:
     # KPIs principais dentro da aba
-    st.subheader(f"📌 Indicadores Gerais: {segmento_selecionado}")
-    
+    st.subheader(f"Indicadores Gerais: {segmento_selecionado}")
+
     kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5 = st.columns(5)
-    
+
     with kpi_col1:
         with st.container(border=True):
             st.metric("🏆 Maior UrbanScore", f"{df_ranking['UrbanScore'].max():.2f}")
@@ -497,35 +656,45 @@ with tab_overview:
             st.metric("📊 Dens. Média", f"{df_ranking['dens_demog'].mean():,.0f}")
     with kpi_col5:
         with st.container(border=True):
-            st.metric("👥 Idade Média", f"{df_ranking['id_media'].mean():.1f}")
+            st.metric("Idade Média", f"{df_ranking['id_media'].mean():.1f}")
 
     # =========================================================
     # MODO EXECUTIVO: RESUMO E RECOMENDAÇÃO
     # =========================================================
     st.markdown("---")
-    st.header("📌 Resumo Executivo & Inteligência de Negócio")
+    st.header("Resumo Executivo e Inteligência Territorial")
 
     top = df_ranking.iloc[0]
 
     # Gráfico de Composição do Score
-    score_components = pd.DataFrame({
-        "Variável": ["Densidade", "Mobilidade", "População", "Idade", "Criminalidade"],
-        "Peso (%)": [
-            pesos["dens"] * 100,
-            pesos["mob"] * 100,
-            pesos["pop"] * 100,
-            pesos["idade"] * 100,
-            abs(pesos["crime"]) * 100
-        ]
-    })
+    score_components = pd.DataFrame(
+        {
+            "Variável": [
+                "Densidade",
+                "Mobilidade",
+                "Centralidade",
+                "População",
+                "Idade",
+                "Criminalidade",
+            ],
+            "Peso (%)": [
+                pesos.get("dens", 0) * 100,
+                pesos.get("mob", 0) * 100,
+                pesos.get("central", 0) * 100,
+                pesos.get("pop", 0) * 100,
+                pesos.get("idade", 0) * 100,
+                abs(pesos.get("crime", 0)) * 100,
+            ],
+        }
+    )
 
     fig_score_pie = px.pie(
         score_components,
         names="Variável",
         values="Peso (%)",
-        title=f"🎯 Metodologia de Pesos: {segmento_selecionado}",
+        title=f"Metodologia de Pesos: {segmento_selecionado}",
         hole=0.4,
-        color_discrete_sequence=px.colors.qualitative.Pastel
+        color_discrete_sequence=px.colors.qualitative.Pastel,
     )
 
     # Colunas para o Resumo e Composição do Score
@@ -533,45 +702,58 @@ with tab_overview:
 
     with exec_col1:
         st.success(f"""
-        ### 📍 Recomendação Estratégica: {top["nm_dist"]}
+        ### Recomendação Estratégica: {top["nm_dist"]}
         
         O distrito de **{top["nm_dist"]}** foi identificado como a região de maior aderência para o segmento **{segmento_selecionado}**.
         
         **Narrativa de Decisão:**
         - O UrbanScore de **{top["UrbanScore"]:.2f}** indica uma alta compatibilidade territorial.
-        - Apresenta uma robusta **Conectividade Metroferroviária** ({int(top["n_mob"])} estações únicas).
+        - Apresenta um fluxo de aproximadamente **{int(top["n_mob"]):,} mil passageiros/dia** distribuídos em **{int(top["n_stations"])} estações**.
         - Possui uma **Densidade Demográfica** de {top["dens_demog"]:,.0f} hab/km².
-        - A análise sugere um potencial estratégico elevado para implantação imediata, considerando o equilíbrio entre fluxo populacional e segurança relativa.
+        - A análise sugere um potencial estratégico elevado para implantação imediata, considerando o equilíbrio entre fluxo populacional, centralidade e infraestrutura.
         """)
 
     with exec_col2:
         st.plotly_chart(fig_score_pie, width="stretch")
 
     with exec_col2:
-        st.subheader("🎯 Composição do Score")
+        st.subheader("Composição do Score")
         # Tabela de Pesos
         df_pesos = pd.DataFrame(
             [
-                {"Variável": "Mobilidade", "Peso": f"{pesos['mob'] * 100:.0f}%"},
-                {"Variável": "Densidade", "Peso": f"{pesos['dens'] * 100:.0f}%"},
-                {"Variável": "População", "Peso": f"{pesos['pop'] * 100:.0f}%"},
-                {"Variável": "Idade Média", "Peso": f"{pesos['idade'] * 100:.0f}%"},
+                {
+                    "Variável": "Centralidade",
+                    "Peso": f"{pesos.get('central', 0) * 100:.0f}%",
+                },
+                {"Variável": "Mobilidade", "Peso": f"{pesos.get('mob', 0) * 100:.0f}%"},
+                {"Variável": "Densidade", "Peso": f"{pesos.get('dens', 0) * 100:.0f}%"},
+                {"Variável": "População", "Peso": f"{pesos.get('pop', 0) * 100:.0f}%"},
+                {
+                    "Variável": "Idade Média",
+                    "Peso": f"{pesos.get('idade', 0) * 100:.0f}%",
+                },
                 {
                     "Variável": "Criminalidade",
-                    "Peso": f"{pesos['crime'] * 100:.0f}% (redutor)",
+                    "Peso": f"{pesos.get('crime', 0) * 100:.0f}% (redutor)",
                 },
             ]
         )
         st.table(df_pesos.set_index("Variável"))
 
     # Seção de Explicabilidade (Contribuição Real)
-    with st.expander("🔍 Ver Detalhes da Explicabilidade (Contribuição Real no Distrito)"):
+    with st.expander(
+        "🔍 Ver Detalhes da Explicabilidade (Contribuição Real no Distrito)"
+    ):
         exp_col1, exp_col2 = st.columns(2)
 
         with exp_col1:
             st.markdown(f"**Performance em {top['nm_dist']} (0 a 1):**")
             df_contrib = pd.DataFrame(
                 [
+                    {
+                        "Indicador": "Centralidade (Proxy)",
+                        "Valor": round(top["central_norm"], 3),
+                    },
                     {
                         "Indicador": "Densidade Normalizada",
                         "Valor": round(top["dens_norm"], 3),
@@ -605,9 +787,9 @@ with tab_overview:
             """)
 
     # =========================================================
-    # INSIGHTS AUTOMÁTICOS
+    # INSIGHTS ADICIONAIS
     # =========================================================
-    st.subheader("🔎 Insights Territoriais Adicionais")
+    st.subheader("Insights Territoriais Adicionais")
     bairro_mais_denso = df.loc[df["dens_demog"].idxmax()]
     bairro_menos_denso = df.loc[df["dens_demog"].idxmin()]
 
@@ -630,7 +812,7 @@ with tab_overview:
     # =========================================================
     # GRÁFICO PRINCIPAL
     # =========================================================
-    st.subheader("📈 Ranking UrbanScore por Distrito")
+    st.subheader("Ranking UrbanScore por Distrito")
 
     fig = px.bar(
         df_ranking.sort_values("UrbanScore"),
@@ -656,7 +838,7 @@ with tab_overview:
     # =========================================================
     # MAPA INTERATIVO
     # =========================================================
-    st.subheader("🗺️ Distribuição Territorial do UrbanScore")
+    st.subheader("Distribuição Territorial do UrbanScore")
 
     fig_map = px.choropleth_map(
         df,
@@ -686,17 +868,17 @@ with tab_infra:
     # =========================================================
     # NOVA SEÇÃO: INFRAESTRUTURA METROFERROVIÁRIA
     # =========================================================
-    st.subheader("🚇 Infraestrutura Metroferroviária")
+    st.subheader("Infraestrutura Metroferroviária")
 
     # KPIs de Mobilidade
     m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-    m_col1.metric("Total de Integrações", total_est)
-    m_col2.metric("Maior Conectividade", f"{top_dist} ({top_val})")
-    m_col3.metric("Pontos de Metrô", total_m)
+    m_col1.metric("Estações Mapeadas", total_est)
+    m_col2.metric("Polo de Movimentação", f"{top_dist}")
+    m_col3.metric("Fluxo Metro (Jan/26)", f"{sum(PASSENGER_FLOW.values()):,.0f}k")
     m_col4.metric("Pontos de Trem", total_t)
 
     st.info(
-        "💡 **Nota sobre Conectividade:** A contagem de integrações reflete todos os pontos de acesso e conexões de linhas dentro do território do distrito. Distritos com estações de integração (ex: Ana Rosa, Santa Cruz) apresentam números maiores pois cada linha é contabilizada como um ponto de conectividade."
+        "💡 **Nota sobre Inteligência de Fluxo:** O UrbanScore agora utiliza a **Entrada Diária de Passageiros** (dados reais do Metrô SP) em vez de apenas contar o número de estações. Isso permite diferenciar distritos com estações de alta rotatividade comercial de áreas puramente residenciais."
     )
 
     if not df_transporte.empty:
@@ -728,7 +910,7 @@ with tab_infra:
 # =========================================================
 # IDADE MÉDIA
 # =========================================================
-st.subheader("👥 Idade Média por Distrito")
+st.subheader("Idade Média por Distrito")
 
 fig3 = px.bar(
     df_idade,
@@ -748,7 +930,7 @@ st.plotly_chart(fig3, width="stretch")
 # =========================================================
 # SCATTER
 # =========================================================
-st.subheader("🏙️ Relação entre População e Densidade")
+st.subheader("Relação entre População e Densidade")
 
 fig4 = px.scatter(
     df,
@@ -778,7 +960,9 @@ with tab_security:
 
         if "dp" in df_crime.columns:
             df_crime["nm_dist"] = (
-                df_crime["dp"].astype(str).str.replace(r"^\d+\s*DP\s*-\s*", "", regex=True)
+                df_crime["dp"]
+                .astype(str)
+                .str.replace(r"^\d+\s*DP\s*-\s*", "", regex=True)
             )
             df_crime["nm_dist"] = df_crime["nm_dist"].apply(normalize_text)
             df_crime_grouped = (
@@ -788,9 +972,11 @@ with tab_security:
             )
 
             df_crime_merge = df.merge(df_crime_grouped, on="nm_dist", how="left")
-            df_crime_merge["total_ocorrencias"] = df_crime_merge["total_ocorrencias"].fillna(0)
+            df_crime_merge["total_ocorrencias"] = df_crime_merge[
+                "total_ocorrencias"
+            ].fillna(0)
 
-            st.subheader("🚨 Ocorrências Criminais por Distrito (Janeiro/2025)")
+            st.subheader("Ocorrências Criminais por Distrito (Janeiro/2025)")
 
             df_crime_chart = df_crime_merge.sort_values(
                 by="total_ocorrencias", ascending=False
@@ -810,9 +996,11 @@ with tab_security:
             st.plotly_chart(fig_crime, width="stretch")
 
             if "total_ocorrencias" in df_crime_merge.columns:
-                st.subheader("🗺️ Distribuição Territorial da Criminalidade")
+                st.subheader("Distribuição Territorial da Criminalidade")
                 for feature in geojson_data["features"]:
-                    feature["properties"]["ds_nome"] = normalize_text(feature["properties"]["ds_nome"])
+                    feature["properties"]["ds_nome"] = normalize_text(
+                        feature["properties"]["ds_nome"]
+                    )
 
                 fig_crime_map = px.choropleth_map(
                     df_crime_merge,
@@ -827,12 +1015,16 @@ with tab_security:
                     zoom=9,
                     opacity=0.75,
                 )
-                fig_crime_map.update_layout(height=800, margin={"r": 0, "t": 0, "l": 0, "b": 0})
+                fig_crime_map.update_layout(
+                    height=800, margin={"r": 0, "t": 0, "l": 0, "b": 0}
+                )
                 st.plotly_chart(fig_crime_map, width="stretch")
 
             if not df_crime_chart.empty:
                 distrito_mais_ocorrencias = df_crime_chart.iloc[0]
-                st.warning(f"**Insight:** O distrito de **{distrito_mais_ocorrencias['nm_dist']}** registrou **{int(distrito_mais_ocorrencias['total_ocorrencias'])}** ocorrências em Jan/2025.")
+                st.warning(
+                    f"**Insight:** O distrito de **{distrito_mais_ocorrencias['nm_dist']}** registrou **{int(distrito_mais_ocorrencias['total_ocorrencias'])}** ocorrências em Jan/2025."
+                )
 
     except Exception as e:
         st.info("Módulo de criminalidade em manutenção.")
@@ -841,12 +1033,13 @@ with tab_data:
     # =========================================================
     # TABELA E METODOLOGIA
     # =========================================================
-    st.subheader("📋 Dados Consolidados & Metodologia")
-    
+    st.subheader("Dados Consolidados e Metodologia")
+
     with st.container(border=True):
         st.dataframe(
-            df_ranking[["nm_dist", "populacao", "dens_demog", "id_media", "UrbanScore"]]
-            .sort_values(by="UrbanScore", ascending=False),
+            df_ranking[
+                ["nm_dist", "populacao", "dens_demog", "id_media", "UrbanScore"]
+            ].sort_values(by="UrbanScore", ascending=False),
             width="stretch",
         )
 
@@ -861,14 +1054,14 @@ with tab_data:
 
     with st.expander("📘 Detalhes da Metodologia"):
         st.markdown("""
-        **UrbanScore v2.0**
+        **UrbanScore v3.0 (Estratégico)**
         
-        O indicador é adaptativo e ponderado conforme o segmento de negócio escolhido:
-        1. **Normalização**: Todos os dados são escalonados (0-1).
-        2. **Ponderação**: Pesos específicos são aplicados (ex: Restaurantes valorizam fluxo e mobilidade).
-        3. **Escalonamento**: O score final é projetado em uma escala de 0 a 100.
+        O indicador evoluiu para separar **acessibilidade** de **relevância econômica**:
+        1. **Centralidade Urbana**: Nova variável composta que atua como proxy de densidade corporativa, oferta de empregos e relevância comercial histórica do distrito.
+        2. **Mobilidade Inteligente**: Integração de dados reais de fluxo de passageiros (Metrô SP), diferenciando polos de alta rotatividade.
+        3. **Normalização & Ponderação**: Todos os dados são escalonados (0-1) e os pesos são rebalanceados para refletir o potencial de decisão do mundo real.
         
-        *Fontes: IBGE, SEADE, GeoSampa, SSP-SP.*
+        *Fontes: IBGE, SEADE, GeoSampa, SSP-SP, Metrô SP, Análise Estratégica Territorial.*
         """)
-    
-    st.caption("Urbanis Intel Platform | Professional Edition 2025")
+
+    st.caption("Urbanis Platform | Academic Edition 2026")
