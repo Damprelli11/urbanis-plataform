@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import json
+import pyproj
 import unicodedata
 
 # =========================================================
@@ -63,6 +64,39 @@ try:
 except Exception as e:
     st.error(f"Erro ao carregar GeoJSON: {e}")
     st.stop()
+
+# =========================================================
+# CARREGAMENTO DE ESTAÇÕES (METRÔ E TREM)
+# =========================================================
+transformer = pyproj.Transformer.from_crs("epsg:31983", "epsg:4326", always_xy=True)
+
+def load_transport_data(path, type_label):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        rows = []
+        for feature in data.get("features", []):
+            coords = feature["geometry"]["coordinates"]
+            name = feature["properties"].get("nm_estacao_metro_trem", "N/A")
+            
+            # Conversão UTM 23S -> WGS84 (Lat/Lon)
+            lon, lat = transformer.transform(coords[0], coords[1])
+            
+            rows.append({
+                "estacao": name,
+                "latitude": lat,
+                "longitude": lon,
+                "tipo": type_label
+            })
+        return pd.DataFrame(rows)
+    except Exception as e:
+        st.warning(f"Aviso: Erro ao carregar {type_label}: {e}")
+        return pd.DataFrame(columns=["estacao", "latitude", "longitude", "tipo"])
+
+df_metro = load_transport_data("assets/geoportal_estacao_metro_v2.geojson", "Metrô")
+df_trem = load_transport_data("assets/geoportal_estacao_trem_v2.geojson", "Trem")
+df_transporte = pd.concat([df_metro, df_trem], ignore_index=True)
 
 # =========================================================
 # LIMPEZA DAS COLUNAS
@@ -253,6 +287,35 @@ fig_map = px.choropleth_mapbox(
 fig_map.update_layout(height=800, margin={"r": 0, "t": 0, "l": 0, "b": 0})
 
 st.plotly_chart(fig_map, use_container_width=True)
+
+# =========================================================
+# NOVA SEÇÃO: INFRAESTRUTURA METROFERROVIÁRIA
+# =========================================================
+st.subheader("🚇 Infraestrutura Metroferroviária")
+
+if not df_transporte.empty:
+    fig_transp = px.scatter_mapbox(
+        df_transporte,
+        lat="latitude",
+        lon="longitude",
+        color="tipo",
+        hover_name="estacao",
+        hover_data={"tipo": True, "latitude": False, "longitude": False},
+        color_discrete_map={"Metrô": "blue", "Trem": "red"},
+        mapbox_style="carto-positron",
+        center={"lat": -23.55, "lon": -46.63},
+        zoom=10,
+    )
+    
+    fig_transp.update_layout(
+        height=600,
+        margin={"r": 0, "t": 0, "l": 0, "b": 0},
+        legend=dict(title="Tipo de Estação", yanchor="top", y=0.99, xanchor="left", x=0.01)
+    )
+    
+    st.plotly_chart(fig_transp, use_container_width=True)
+else:
+    st.info("Dados de infraestrutura metroferroviária não disponíveis.")
 
 # =========================================================
 # IDADE MÉDIA
