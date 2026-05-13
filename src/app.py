@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import json
 import pyproj
+from shapely.geometry import shape, Point
 import unicodedata
 
 # =========================================================
@@ -97,6 +98,46 @@ def load_transport_data(path, type_label):
 df_metro = load_transport_data("assets/geoportal_estacao_metro_v2.geojson", "Metrô")
 df_trem = load_transport_data("assets/geoportal_estacao_trem_v2.geojson", "Trem")
 df_transporte = pd.concat([df_metro, df_trem], ignore_index=True)
+
+# =========================================================
+# PROCESSAMENTO DE KPIs DE MOBILIDADE
+# =========================================================
+@st.cache_data
+def get_mobility_metrics(_df_transporte, _geojson_data):
+    if _df_transporte.empty:
+        return 0, 0, 0, "N/A", 0
+    
+    # Criar polígonos shapely para os distritos para spatial join manual
+    distritos_shapes = [
+        {"nome": normalize_text(f["properties"].get("ds_nome", "N/A")), "shape": shape(f["geometry"])}
+        for f in _geojson_data["features"]
+    ]
+    
+    def find_distrito(lat, lon):
+        p = Point(lon, lat)
+        for d in distritos_shapes:
+            if d["shape"].contains(p):
+                return d["nome"]
+        return None
+
+    temp_df = _df_transporte.copy()
+    temp_df["distrito"] = temp_df.apply(lambda r: find_distrito(r["latitude"], r["longitude"]), axis=1)
+    
+    total = len(temp_df)
+    metro = len(temp_df[temp_df["tipo"] == "Metrô"])
+    trem = len(temp_df[temp_df["tipo"] == "Trem"])
+    
+    counts = temp_df["distrito"].value_counts()
+    if not counts.empty:
+        top_d = counts.idxmax()
+        top_v = int(counts.max())
+    else:
+        top_d = "N/A"
+        top_v = 0
+        
+    return total, metro, trem, top_d, top_v
+
+total_est, total_m, total_t, top_dist, top_val = get_mobility_metrics(df_transporte, geojson_data)
 
 # =========================================================
 # LIMPEZA DAS COLUNAS
@@ -292,6 +333,13 @@ st.plotly_chart(fig_map, use_container_width=True)
 # NOVA SEÇÃO: INFRAESTRUTURA METROFERROVIÁRIA
 # =========================================================
 st.subheader("🚇 Infraestrutura Metroferroviária")
+
+# KPIs de Mobilidade
+m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+m_col1.metric("Total de Integrações", total_est)
+m_col2.metric("Maior Conectividade", f"{top_dist} ({top_val})")
+m_col3.metric("Pontos de Metrô", total_m)
+m_col4.metric("Pontos de Trem", total_t)
 
 if not df_transporte.empty:
     fig_transp = px.scatter_mapbox(
