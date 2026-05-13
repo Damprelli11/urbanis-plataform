@@ -316,33 +316,45 @@ MAPA_CENTRALIDADE = {
 
 SEGMENTOS = {
     "Modelo Padrão": {
-        "opp": {"dens": 0.25, "mob": 0.15, "central": 0.35, "pop": 0.15, "idade": 0.10},
+        "infra": {"dens": 0.60, "mob": 0.40},
+        "market": {"central": 0.50, "pop": 0.30, "idade": 0.20},
         "risk": {"crime": 0.40, "socio": 0.60},
-        "alpha": 0.20 # Sensibilidade ao risco (0-1)
+        "balance": {"infra": 0.40, "market": 0.60},
+        "alpha": 0.20
     },
     "Restaurante": {
-        "opp": {"dens": 0.25, "mob": 0.25, "central": 0.40, "pop": 0.10, "idade": 0.00},
+        "infra": {"dens": 0.50, "mob": 0.50},
+        "market": {"central": 0.60, "pop": 0.30, "idade": 0.10},
         "risk": {"crime": 0.50, "socio": 0.50},
+        "balance": {"infra": 0.30, "market": 0.70},
         "alpha": 0.30
     },
     "Coworking": {
-        "opp": {"dens": 0.20, "mob": 0.20, "central": 0.45, "pop": 0.00, "idade": 0.15},
+        "infra": {"dens": 0.40, "mob": 0.60},
+        "market": {"central": 0.70, "pop": 0.10, "idade": 0.20},
         "risk": {"crime": 0.60, "socio": 0.40},
+        "balance": {"infra": 0.20, "market": 0.80},
         "alpha": 0.25
     },
     "Papelaria": {
-        "opp": {"dens": 0.30, "mob": 0.15, "central": 0.20, "pop": 0.35, "idade": 0.00},
+        "infra": {"dens": 0.70, "mob": 0.30},
+        "market": {"central": 0.30, "pop": 0.60, "idade": 0.10},
         "risk": {"crime": 0.50, "socio": 0.50},
+        "balance": {"infra": 0.50, "market": 0.50},
         "alpha": 0.15
     },
     "Loja Premium": {
-        "opp": {"dens": 0.05, "mob": 0.15, "central": 0.50, "pop": 0.05, "idade": 0.25},
+        "infra": {"dens": 0.30, "mob": 0.70},
+        "market": {"central": 0.70, "pop": 0.10, "idade": 0.20},
         "risk": {"crime": 0.40, "socio": 0.60},
-        "alpha": 0.40 # Alta sensibilidade ao risco socioeconômico
+        "balance": {"infra": 0.15, "market": 0.85}, # Prioriza Mercado sobre Infra
+        "alpha": 0.45
     },
     "Farmácia": {
-        "opp": {"dens": 0.35, "mob": 0.20, "central": 0.20, "pop": 0.25, "idade": 0.00},
+        "infra": {"dens": 0.70, "mob": 0.30},
+        "market": {"central": 0.30, "pop": 0.60, "idade": 0.10},
         "risk": {"crime": 0.50, "socio": 0.50},
+        "balance": {"infra": 0.60, "market": 0.40}, # Prioriza Infra sobre Mercado
         "alpha": 0.10
     },
 }
@@ -599,51 +611,61 @@ segmento_selecionado = st.sidebar.selectbox(
     help="O UrbanScore será recalculado com pesos específicos para o setor escolhido.",
 )
 pesos = SEGMENTOS[segmento_selecionado]
-p_opp = pesos["opp"]
+p_infra = pesos["infra"]
+p_market = pesos["market"]
 p_risk = pesos["risk"]
+balance = pesos["balance"]
 alpha = pesos.get("alpha", 0.2)
 
 # =========================================================
-# MOTOR DO URBANSCORE ADAPTATIVO (V4.0 - MULTIPLICATIVO)
+# MOTOR DO URBANSCORE ADAPTATIVO (V4.1 - FINAL STABILITY)
 # =========================================================
-# Cálculo realizado ANTES do filtro de distritos para manter o contexto global da cidade
 def min_max_scale(series):
     if series.max() == series.min():
         return series * 0
     return (series - series.min()) / (series.max() - series.min())
 
+# Normalização com Suavização Logística (Evita Falsa Precisão)
+def smooth_centrality(val):
+    # Transforma o proxy linear em uma curva de maturidade econômica
+    # K=10, L=1, x0=0.5 (Sigmoide centrada)
+    return 1 / (1 + np.exp(-8 * (val - 0.5)))
 
 # Normalização das variáveis core
-df["centralidade"] = (
-    df["nm_dist"].map(MAPA_CENTRALIDADE).fillna(0.30)
-)
+df["central_raw"] = df["nm_dist"].map(MAPA_CENTRALIDADE).fillna(0.30)
+df["central_norm"] = df["central_raw"].apply(smooth_centrality)
 
 df["dens_norm"] = min_max_scale(df["dens_demog"])
 df["mob_norm"] = min_max_scale(df["n_mob"])
 df["pop_norm"] = min_max_scale(df["populacao"])
 df["idade_norm"] = min_max_scale(df["id_media"])
 df["crime_norm"] = min_max_scale(df["n_crime"])
-df["central_norm"] = min_max_scale(df["centralidade"])
 df["vulner_norm"] = min_max_scale(df["socio_vulnerability_score"])
 
-# 1. Opportunity Score (Potencial Bruto)
-df["OpportunityScore"] = (
-    (df["dens_norm"] * p_opp.get("dens", 0))
-    + (df["mob_norm"] * p_opp.get("mob", 0))
-    + (df["pop_norm"] * p_opp.get("pop", 0))
-    + (df["idade_norm"] * p_opp.get("idade", 0))
-    + (df["central_norm"] * p_opp.get("central", 0))
-)
+# Cálculo Isolado por Segmento (Prevenção de Vazamento de Estado)
+def calculate_urban_score(data, p_infra, p_market, p_risk, balance, alpha):
+    # Camada 1: Infraestrutura (Base Física)
+    infra = (data["dens_norm"] * p_infra.get("dens", 0) + 
+             data["mob_norm"] * p_infra.get("mob", 0))
+    
+    # Camada 2: Mercado (Potencial Econômico)
+    market = (data["central_norm"] * p_market.get("central", 0) + 
+              data["pop_norm"] * p_market.get("pop", 0) + 
+              data["idade_norm"] * p_market.get("idade", 0))
+    
+    # Camada 3: Oportunidade Consolidada
+    opp = (infra * balance.get("infra", 0) + market * balance.get("market", 0))
+    
+    # Camada 4: Risco Multiplicativo
+    risk = (data["crime_norm"] * p_risk.get("crime", 0) + 
+            data["vulner_norm"] * p_risk.get("socio", 0))
+    
+    # Equação Final v4.1
+    score = opp * (1 - (alpha * risk))
+    return score.clip(0, 1) * 100
 
-# 2. Risk Score (Penalizadores Estruturais)
-df["RiskScore"] = (
-    (df["crime_norm"] * p_risk.get("crime", 0))
-    + (df["vulner_norm"] * p_risk.get("socio", 0))
-)
-
-# 3. Final UrbanScore (Decisão: Potencial mitigado pelo Risco)
-df["UrbanScore"] = df["OpportunityScore"] * (1 - (alpha * df["RiskScore"]))
-df["UrbanScore"] = (df["UrbanScore"] * 100).clip(0, 100).round(2)
+df["UrbanScore"] = calculate_urban_score(df, p_infra, p_market, p_risk, balance, alpha)
+df["UrbanScore"] = df["UrbanScore"].round(2)
 
 # =========================================================
 # FILTROS DE EXIBIÇÃO
@@ -732,10 +754,11 @@ with tab_overview:
         with st.container(border=True):
             st.metric("Idade Média", f"{df_ranking['id_media'].mean():.1f}")
 
-    # Gráfico de Composição do Score (Grupo Oportunidade e Risco)
+    # Gráfico de Composição do Score (Grupo Oportunidade [Infra, Mercado] e Risco)
     score_components = pd.DataFrame(
         {
-            "Grupo": ["Oportunidade"] * 5 + ["Risco"] * 2,
+            "Camada": ["Oportunidade"] * 5 + ["Risco"] * 2,
+            "Sub-índice": ["Infraestrutura"] * 2 + ["Mercado"] * 3 + ["Risco"] * 2,
             "Variável": [
                 "Densidade",
                 "Mobilidade",
@@ -746,11 +769,11 @@ with tab_overview:
                 "Socioeconômico",
             ],
             "Peso Bruto": [
-                p_opp.get("dens", 0),
-                p_opp.get("mob", 0),
-                p_opp.get("central", 0),
-                p_opp.get("pop", 0),
-                p_opp.get("idade", 0),
+                p_infra.get("dens", 0) * balance.get("infra", 0),
+                p_infra.get("mob", 0) * balance.get("infra", 0),
+                p_market.get("central", 0) * balance.get("market", 0),
+                p_market.get("pop", 0) * balance.get("market", 0),
+                p_market.get("idade", 0) * balance.get("market", 0),
                 p_risk.get("crime", 0) * alpha,
                 p_risk.get("socio", 0) * alpha,
             ],
@@ -759,10 +782,10 @@ with tab_overview:
 
     fig_score_pie = px.sunburst(
         score_components,
-        path=["Grupo", "Variável"],
+        path=["Camada", "Sub-índice", "Variável"],
         values="Peso Bruto",
-        title=f"Arquitetura de Decisão: {segmento_selecionado}",
-        color="Grupo",
+        title=f"Arquitetura de Decisão v4.1: {segmento_selecionado}",
+        color="Camada",
         color_discrete_map={"Oportunidade": "#2563EB", "Risco": "#EF4444"},
     )
 
@@ -807,13 +830,13 @@ with tab_overview:
         st.subheader("Configuração do Motor")
         st.plotly_chart(fig_score_pie, width="stretch")
         
-        # Tabela de Pesos resumida
+        # Tabela de Pesos resumida (Pesos Efetivos)
         df_pesos = pd.DataFrame([
-            {"Camada": "Oportunidade", "Variável": "Centralidade", "Peso": f"{p_opp.get('central', 0) * 100:.0f}%"},
-            {"Camada": "Oportunidade", "Variável": "Mobilidade", "Peso": f"{p_opp.get('mob', 0) * 100:.0f}%"},
-            {"Camada": "Oportunidade", "Variável": "Densidade", "Peso": f"{p_opp.get('dens', 0) * 100:.0f}%"},
-            {"Camada": "Risco (Penalizador)", "Variável": "Sensibilidade Geral", "Peso": f"{alpha * 100:.0f}%"},
-            {"Camada": "Risco (Penalizador)", "Variável": "Perfil: Crime vs Social", "Peso": f"{p_risk.get('crime',0)*100:.0f}/{p_risk.get('socio',0)*100:.0f}"},
+            {"Camada": "Infraestrutura", "Variável": "Mobilidade/Fluxo", "Peso": f"{p_infra.get('mob', 0) * balance.get('infra', 0) * 100:.0f}%"},
+            {"Camada": "Infraestrutura", "Variável": "Densidade", "Peso": f"{p_infra.get('dens', 0) * balance.get('infra', 0) * 100:.0f}%"},
+            {"Camada": "Mercado", "Variável": "Centralidade", "Peso": f"{p_market.get('central', 0) * balance.get('market', 0) * 100:.0f}%"},
+            {"Camada": "Mercado", "Variável": "Perfil Demográfico", "Peso": f"{(p_market.get('pop', 0) + p_market.get('idade', 0)) * balance.get('market', 0) * 100:.0f}%"},
+            {"Camada": "Risco", "Variável": "Sensibilidade ao Risco", "Peso": f"{alpha * 100:.0f}%"},
         ])
         st.table(df_pesos.set_index("Camada"))
 
@@ -1115,7 +1138,7 @@ with tab_data:
     with st.container(border=True):
         # Seleção de colunas para o Master Dataset de exibição
         master_cols = [
-            "nm_dist", "UrbanScore", "n_mob", "centralidade", 
+            "nm_dist", "UrbanScore", "n_mob", "central_raw", 
             "n_crime", "socio_vulnerability_score", "populacao", "dens_demog"
         ]
         
@@ -1150,13 +1173,15 @@ with tab_data:
         """)
 
     with st.expander("📘 Detalhes da Metodologia"):
-        st.markdown("""
-        **UrbanScore v4.0 (Motor de Decisão Multiplicativo)**
+        st.markdown(r"""
+        **UrbanScore v4.1 (Location Intelligence Engine)**
         
-        O indicador evoluiu para uma arquitetura de duas camadas para evitar distorções lineares:
-        1. **Índice de Oportunidade (O)**: Soma ponderada de Centralidade, Mobilidade, Densidade e Demografia. Representa o potencial bruto do território.
-        2. **Índice de Risco (R)**: Composto por Criminalidade e Vulnerabilidade Social (IPVS). Atua como um **fator de penalização multiplicativo**.
-        3. **Equação Final**: $Score = O \times (1 - \alpha \times R)$, onde $\alpha$ é a sensibilidade do segmento ao risco estrutural.
+        O indicador agora utiliza uma arquitetura hierárquica de três níveis:
+        1. **Suporte Urbano (Infraestrutura)**: Métrica de mobilidade e densidade. É a base logística do distrito.
+        2. **Potencial Econômico (Mercado)**: Composto por Centralidade Corporativa e Perfil Demográfico. É a força de consumo.
+        3. **Fator de Mitigação (Risco)**: Criminalidade e Vulnerabilidade Social (IPVS), atuando como redutor multiplicativo.
+        
+        **Equação v4.1**: $Score = (w_i \cdot Infra + w_m \cdot Mercado) \times (1 - \alpha \cdot Risco)$
         
         *Fontes: IBGE, SEADE (IPVS), GeoSampa, SSP-SP, Metrô SP, Análise Estratégica Territorial.*
         """)
