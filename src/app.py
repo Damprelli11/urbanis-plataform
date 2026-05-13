@@ -320,42 +320,42 @@ SEGMENTOS = {
         "market": {"central": 0.50, "pop": 0.30, "idade": 0.20},
         "risk": {"crime": 0.40, "socio": 0.60},
         "balance": {"infra": 0.40, "market": 0.60},
-        "alpha": 0.20
+        "alpha": 0.20,
     },
     "Restaurante": {
         "infra": {"dens": 0.50, "mob": 0.50},
         "market": {"central": 0.60, "pop": 0.30, "idade": 0.10},
         "risk": {"crime": 0.50, "socio": 0.50},
         "balance": {"infra": 0.30, "market": 0.70},
-        "alpha": 0.30
+        "alpha": 0.30,
     },
     "Coworking": {
         "infra": {"dens": 0.40, "mob": 0.60},
         "market": {"central": 0.70, "pop": 0.10, "idade": 0.20},
         "risk": {"crime": 0.60, "socio": 0.40},
         "balance": {"infra": 0.20, "market": 0.80},
-        "alpha": 0.25
+        "alpha": 0.25,
     },
     "Papelaria": {
         "infra": {"dens": 0.70, "mob": 0.30},
         "market": {"central": 0.30, "pop": 0.60, "idade": 0.10},
         "risk": {"crime": 0.50, "socio": 0.50},
         "balance": {"infra": 0.50, "market": 0.50},
-        "alpha": 0.15
+        "alpha": 0.15,
     },
     "Loja Premium": {
         "infra": {"dens": 0.30, "mob": 0.70},
         "market": {"central": 0.70, "pop": 0.10, "idade": 0.20},
         "risk": {"crime": 0.40, "socio": 0.60},
-        "balance": {"infra": 0.15, "market": 0.85}, # Prioriza Mercado sobre Infra
-        "alpha": 0.45
+        "balance": {"infra": 0.15, "market": 0.85},  # Prioriza Mercado sobre Infra
+        "alpha": 0.45,
     },
     "Farmácia": {
         "infra": {"dens": 0.70, "mob": 0.30},
         "market": {"central": 0.30, "pop": 0.60, "idade": 0.10},
         "risk": {"crime": 0.50, "socio": 0.50},
-        "balance": {"infra": 0.60, "market": 0.40}, # Prioriza Infra sobre Mercado
-        "alpha": 0.10
+        "balance": {"infra": 0.60, "market": 0.40},  # Prioriza Infra sobre Mercado
+        "alpha": 0.10,
     },
 }
 
@@ -542,17 +542,17 @@ try:
     # Tabela de referência para normalização de nomes e códigos
     df_ref = pd.read_csv("assets/codigos_distritos_msp.csv", sep=";", encoding="latin1")
     df_ref["nm_dist"] = df_ref["distrito"].apply(normalize_text)
-    
+
     # Carregar IPVS
     df_ipvs = pd.read_csv("assets/ipvs_msp.csv", sep=";", encoding="latin1")
-    
+
     # Extrair o código curto (últimos 2 dígitos) do cod_distr do IPVS para bater com cod_ibge da ref
     # Ex: 355030801 -> 1
     df_ipvs["cod_ibge"] = df_ipvs["cod_distr"].astype(str).str[-2:].astype(int)
-    
+
     # Join para trazer o nm_dist para o IPVS
     df_ipvs = df_ipvs.merge(df_ref[["cod_ibge", "nm_dist"]], on="cod_ibge", how="left")
-    
+
     # Mapeamento de pesos para o cálculo do score de vulnerabilidade (1=Baixa, 6=Alta)
     ipvs_weights = {
         "Baixíssima Vulnerabilidade": 1,
@@ -560,23 +560,24 @@ try:
         "Baixa Vulnerabilidade": 3,
         "Média Vulnerabilidade": 4,
         "Alta Vulnerabilidade": 5,
-        "Muito Alta Vulnerabilidade": 6
+        "Muito Alta Vulnerabilidade": 6,
     }
-    
+
     df_ipvs["weight"] = df_ipvs["grupo_ipvs"].map(ipvs_weights).fillna(3)
-    
+
     # Cálculo do Score Ponderado por Distrito
     df_ipvs["weighted_val"] = df_ipvs["n_pessoas"] * df_ipvs["weight"]
-    
-    df_ipvs_grouped = df_ipvs.groupby("nm_dist").agg(
-        total_weighted=("weighted_val", "sum"),
-        total_pessoas=("n_pessoas", "sum")
-    ).reset_index()
-    
+
+    df_ipvs_grouped = (
+        df_ipvs.groupby("nm_dist")
+        .agg(total_weighted=("weighted_val", "sum"), total_pessoas=("n_pessoas", "sum"))
+        .reset_index()
+    )
+
     df_ipvs_grouped["socio_vulnerability_score"] = (
         df_ipvs_grouped["total_weighted"] / df_ipvs_grouped["total_pessoas"]
     ).fillna(3.0)
-    
+
     df_ipvs_cons = df_ipvs_grouped[["nm_dist", "socio_vulnerability_score"]]
 except Exception as e:
     pass
@@ -586,7 +587,9 @@ df = df.merge(
     df_mob_dist.rename(columns={"distrito": "nm_dist"}), on="nm_dist", how="left"
 ).fillna({"n_mob": 0, "n_stations": 0})
 df = df.merge(df_crime_cons, on="nm_dist", how="left").fillna({"n_crime": 0})
-df = df.merge(df_ipvs_cons, on="nm_dist", how="left").fillna({"socio_vulnerability_score": 3.0})
+df = df.merge(df_ipvs_cons, on="nm_dist", how="left").fillna(
+    {"socio_vulnerability_score": 3.0}
+)
 
 # 5. Criação do Master Dataset Distrital (Camada Unificada)
 # Consolida a última visão de cada distrito com todos os scores
@@ -617,6 +620,7 @@ p_risk = pesos["risk"]
 balance = pesos["balance"]
 alpha = pesos.get("alpha", 0.2)
 
+
 # =========================================================
 # MOTOR DO URBANSCORE ADAPTATIVO (V4.1 - FINAL STABILITY)
 # =========================================================
@@ -625,11 +629,13 @@ def min_max_scale(series):
         return series * 0
     return (series - series.min()) / (series.max() - series.min())
 
+
 # Normalização com Suavização Logística (Evita Falsa Precisão)
 def smooth_centrality(val):
     # Transforma o proxy linear em uma curva de maturidade econômica
     # K=10, L=1, x0=0.5 (Sigmoide centrada)
     return 1 / (1 + np.exp(-8 * (val - 0.5)))
+
 
 # Normalização das variáveis core
 df["central_raw"] = df["nm_dist"].map(MAPA_CENTRALIDADE).fillna(0.30)
@@ -642,30 +648,31 @@ df["idade_norm"] = min_max_scale(df["id_media"])
 df["crime_norm"] = min_max_scale(df["n_crime"])
 df["vulner_norm"] = min_max_scale(df["socio_vulnerability_score"])
 
-# Cálculo Isolado por Segmento (Prevenção de Vazamento de Estado)
-def calculate_urban_score(data, p_infra, p_market, p_risk, balance, alpha):
-    # Camada 1: Infraestrutura (Base Física)
-    infra = (data["dens_norm"] * p_infra.get("dens", 0) + 
-             data["mob_norm"] * p_infra.get("mob", 0))
-    
-    # Camada 2: Mercado (Potencial Econômico)
-    market = (data["central_norm"] * p_market.get("central", 0) + 
-              data["pop_norm"] * p_market.get("pop", 0) + 
-              data["idade_norm"] * p_market.get("idade", 0))
-    
-    # Camada 3: Oportunidade Consolidada
-    opp = (infra * balance.get("infra", 0) + market * balance.get("market", 0))
-    
-    # Camada 4: Risco Multiplicativo
-    risk = (data["crime_norm"] * p_risk.get("crime", 0) + 
-            data["vulner_norm"] * p_risk.get("socio", 0))
-    
-    # Equação Final v4.1
-    score = opp * (1 - (alpha * risk))
-    return score.clip(0, 1) * 100
 
-df["UrbanScore"] = calculate_urban_score(df, p_infra, p_market, p_risk, balance, alpha)
-df["UrbanScore"] = df["UrbanScore"].round(2)
+# Cálculo Isolado por Segmento (Prevenção de Vazamento de Estado)
+def apply_urban_scoring(data, p_infra, p_market, p_risk, balance, alpha):
+    # Camada 1: Infraestrutura (Base Física)
+    data["InfraScore"] = data["dens_norm"] * p_infra.get("dens", 0) + data["mob_norm"] * p_infra.get("mob", 0)
+
+    # Camada 2: Mercado (Potencial Econômico)
+    data["MarketScore"] = (
+        data["central_norm"] * p_market.get("central", 0)
+        + data["pop_norm"] * p_market.get("pop", 0)
+        + data["idade_norm"] * p_market.get("idade", 0)
+    )
+
+    # Camada 3: Oportunidade Consolidada
+    data["OpportunityScore"] = data["InfraScore"] * balance.get("infra", 0) + data["MarketScore"] * balance.get("market", 0)
+
+    # Camada 4: Risco Multiplicativo
+    data["RiskScore"] = data["crime_norm"] * p_risk.get("crime", 0) + data["vulner_norm"] * p_risk.get("socio", 0)
+
+    # Equação Final v4.1
+    data["UrbanScore"] = data["OpportunityScore"] * (1 - (alpha * data["RiskScore"]))
+    data["UrbanScore"] = (data["UrbanScore"].clip(0, 1) * 100).round(2)
+    return data
+
+df = apply_urban_scoring(df, p_infra, p_market, p_risk, balance, alpha)
 
 # =========================================================
 # FILTROS DE EXIBIÇÃO
@@ -706,33 +713,59 @@ with tab_overview:
     # =========================================================
     # MOTOR DE DECISÃO: RECOMENDAÇÃO ESTRATÉGICA
     # =========================================================
+    # =========================================================
+    # RECOMENDAÇÃO ESTRATÉGICA DINÂMICA (NARRATIVA V4.1)
+    # =========================================================
     top = df_ranking.iloc[0]
     runner_up = df_ranking.iloc[1] if len(df_ranking) > 1 else top
+    score = top["UrbanScore"]
+    
+    # Lógica de Semântica Visual
+    if score >= 75:
+        box_color = "#22C55E"
+        box_bg = "rgba(34, 197, 94, 0.05)"
+        status_label = "ALTA ADERÊNCIA"
+    elif score >= 50:
+        box_color = "#EAB308"
+        box_bg = "rgba(234, 179, 8, 0.05)"
+        status_label = "ADERÊNCIA MODERADA"
+    else:
+        box_color = "#EF4444"
+        box_bg = "rgba(239, 68, 68, 0.05)"
+        status_label = "BAIXA ADERÊNCIA"
 
-    st.markdown(f"""
-    <div style="background-color: rgba(37, 99, 235, 0.1); padding: 25px; border-radius: 15px; border-left: 8px solid #2563EB; margin-bottom: 30px;">
-        <h2 style="margin-top: 0; color: #2563EB;">🎯 Recomendação Estratégica</h2>
+    # Lógica de Narrativa Baseada em Dados
+    c_desc = "Alta Centralidade Econômica" if top["central_norm"] > 0.7 else "Centralidade em Consolidação" if top["central_norm"] > 0.3 else "Baixa Influência Econômica"
+    m_desc = "Elevado Fluxo Urbano" if top["mob_norm"] > 0.6 else "Fluxo Urbano Localizado"
+    r_desc = "Risco Operacional Controlado" if top["RiskScore"] < 0.4 else "⚠️ Alerta de Risco Estrutural"
+    d_desc = "Alta Densidade de Público" if top["dens_norm"] > 0.6 else "Baixa Densidade Populacional"
+
+    st.markdown(
+        f"""
+    <div style="background-color: {box_bg}; padding: 25px; border-radius: 15px; border-left: 8px solid {box_color}; margin-bottom: 30px;">
+        <h2 style="margin-top: 0; color: {box_color};">🎯 {status_label}</h2>
         <p style="font-size: 1.1em; margin-bottom: 15px;">Segmento: <b>{segmento_selecionado}</b></p>
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div style="flex: 2;">
                 <h1 style="margin: 0; font-size: 3em; font-weight: 800;">{top["nm_dist"]}</h1>
-                <p style="margin-top: 10px; font-size: 1.2em; color: #556677;">Justificativa de Liderança:</p>
+                <p style="margin-top: 10px; font-size: 1.2em; color: #556677;">Justificativa de Performance:</p>
                 <ul style="font-size: 1.1em; line-height: 1.6em;">
-                    <li><b>Alta Centralidade Econômica:</b> Relevância histórica e corporativa no território.</li>
-                    <li><b>Elevado Fluxo Urbano:</b> Volume de circulação superior à média da cidade.</li>
-                    <li><b>Conectividade Metroferroviária:</b> Infraestrutura de transporte consolidada.</li>
-                    <li><b>Alta Densidade Populacional:</b> Concentração de público-alvo potencial.</li>
-                    <li><b>Baixa Penalização Criminal Relativa:</b> Risco controlado para o perfil do negócio.</li>
+                    <li><b>Eixo Econômico:</b> {c_desc}.</li>
+                    <li><b>Mobilidade:</b> {m_desc}.</li>
+                    <li><b>Segurança/Vulnerabilidade:</b> {r_desc}.</li>
+                    <li><b>Demografia:</b> {d_desc}.</li>
                 </ul>
             </div>
             <div style="flex: 1; text-align: right; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                 <p style="margin: 0; color: #8899AA; text-transform: uppercase; font-size: 0.8em; letter-spacing: 1px;">UrbanScore</p>
-                <h1 style="margin: 0; font-size: 4em; color: #2563EB;">{top["UrbanScore"]:.1f}</h1>
-                <p style="margin: 0; color: #22C55E; font-weight: 600;">ADERÊNCIA MÁXIMA</p>
+                <h1 style="margin: 0; font-size: 4em; color: {box_color};">{top["UrbanScore"]:.1f}</h1>
+                <p style="margin: 0; color: {box_color}; font-weight: 600;">{status_label}</p>
             </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     # KPIs principais logo abaixo da recomendação
     st.subheader(f"Visão Geral do Mercado: {segmento_selecionado}")
@@ -794,50 +827,109 @@ with tab_overview:
     # =========================================================
     st.markdown("---")
     st.header("Explicabilidade e Inteligência de Ranking")
-    
+
     comp_col1, comp_col2 = st.columns([1.5, 1])
-    
+
     with comp_col1:
         st.subheader("Por que este distrito venceu?")
         st.markdown(f"""
         A vitória de **{top["nm_dist"]}** sobre **{runner_up["nm_dist"]}** deve-se principalmente à sua performance superior em variáveis de alto peso para o segmento **{segmento_selecionado}**.
         """)
-        
+
         # Gráfico de comparação 1st vs 2nd
-        comparison_data = pd.DataFrame([
-            {"Indicador": "Centralidade", "Distrito": top["nm_dist"], "Valor": top["central_norm"]},
-            {"Indicador": "Centralidade", "Distrito": runner_up["nm_dist"], "Valor": runner_up["central_norm"]},
-            {"Indicador": "Mobilidade", "Distrito": top["nm_dist"], "Valor": top["mob_norm"]},
-            {"Indicador": "Mobilidade", "Distrito": runner_up["nm_dist"], "Valor": runner_up["mob_norm"]},
-            {"Indicador": "Densidade", "Distrito": top["nm_dist"], "Valor": top["dens_norm"]},
-            {"Indicador": "Densidade", "Distrito": runner_up["nm_dist"], "Valor": runner_up["dens_norm"]},
-            {"Indicador": "Social", "Distrito": top["nm_dist"], "Valor": 1 - top["vulner_norm"]},
-            {"Indicador": "Social", "Distrito": runner_up["nm_dist"], "Valor": 1 - runner_up["vulner_norm"]},
-        ])
-        
+        comparison_data = pd.DataFrame(
+            [
+                {
+                    "Indicador": "Centralidade",
+                    "Distrito": top["nm_dist"],
+                    "Valor": top["central_norm"],
+                },
+                {
+                    "Indicador": "Centralidade",
+                    "Distrito": runner_up["nm_dist"],
+                    "Valor": runner_up["central_norm"],
+                },
+                {
+                    "Indicador": "Mobilidade",
+                    "Distrito": top["nm_dist"],
+                    "Valor": top["mob_norm"],
+                },
+                {
+                    "Indicador": "Mobilidade",
+                    "Distrito": runner_up["nm_dist"],
+                    "Valor": runner_up["mob_norm"],
+                },
+                {
+                    "Indicador": "Densidade",
+                    "Distrito": top["nm_dist"],
+                    "Valor": top["dens_norm"],
+                },
+                {
+                    "Indicador": "Densidade",
+                    "Distrito": runner_up["nm_dist"],
+                    "Valor": runner_up["dens_norm"],
+                },
+                {
+                    "Indicador": "Social",
+                    "Distrito": top["nm_dist"],
+                    "Valor": 1 - top["vulner_norm"],
+                },
+                {
+                    "Indicador": "Social",
+                    "Distrito": runner_up["nm_dist"],
+                    "Valor": 1 - runner_up["vulner_norm"],
+                },
+            ]
+        )
+
         fig_comp = px.bar(
-            comparison_data, 
-            x="Indicador", 
-            y="Valor", 
-            color="Distrito", 
+            comparison_data,
+            x="Indicador",
+            y="Valor",
+            color="Distrito",
             barmode="group",
             title=f"Comparação Direta: {top['nm_dist']} vs {runner_up['nm_dist']}",
-            color_discrete_sequence=[px.colors.qualitative.Prism[0], px.colors.qualitative.Prism[1]]
+            color_discrete_sequence=[
+                px.colors.qualitative.Prism[0],
+                px.colors.qualitative.Prism[1],
+            ],
         )
         st.plotly_chart(fig_comp, width="stretch")
 
     with comp_col2:
         st.subheader("Configuração do Motor")
         st.plotly_chart(fig_score_pie, width="stretch")
-        
+
         # Tabela de Pesos resumida (Pesos Efetivos)
-        df_pesos = pd.DataFrame([
-            {"Camada": "Infraestrutura", "Variável": "Mobilidade/Fluxo", "Peso": f"{p_infra.get('mob', 0) * balance.get('infra', 0) * 100:.0f}%"},
-            {"Camada": "Infraestrutura", "Variável": "Densidade", "Peso": f"{p_infra.get('dens', 0) * balance.get('infra', 0) * 100:.0f}%"},
-            {"Camada": "Mercado", "Variável": "Centralidade", "Peso": f"{p_market.get('central', 0) * balance.get('market', 0) * 100:.0f}%"},
-            {"Camada": "Mercado", "Variável": "Perfil Demográfico", "Peso": f"{(p_market.get('pop', 0) + p_market.get('idade', 0)) * balance.get('market', 0) * 100:.0f}%"},
-            {"Camada": "Risco", "Variável": "Sensibilidade ao Risco", "Peso": f"{alpha * 100:.0f}%"},
-        ])
+        df_pesos = pd.DataFrame(
+            [
+                {
+                    "Camada": "Infraestrutura",
+                    "Variável": "Mobilidade/Fluxo",
+                    "Peso": f"{p_infra.get('mob', 0) * balance.get('infra', 0) * 100:.0f}%",
+                },
+                {
+                    "Camada": "Infraestrutura",
+                    "Variável": "Densidade",
+                    "Peso": f"{p_infra.get('dens', 0) * balance.get('infra', 0) * 100:.0f}%",
+                },
+                {
+                    "Camada": "Mercado",
+                    "Variável": "Centralidade",
+                    "Peso": f"{p_market.get('central', 0) * balance.get('market', 0) * 100:.0f}%",
+                },
+                {
+                    "Camada": "Mercado",
+                    "Variável": "Perfil Demográfico",
+                    "Peso": f"{(p_market.get('pop', 0) + p_market.get('idade', 0)) * balance.get('market', 0) * 100:.0f}%",
+                },
+                {
+                    "Camada": "Risco",
+                    "Variável": "Sensibilidade ao Risco",
+                    "Peso": f"{alpha * 100:.0f}%",
+                },
+            ]
+        )
         st.table(df_pesos.set_index("Camada"))
 
     # Seção de Explicabilidade (Contribuição Real)
@@ -1138,29 +1230,41 @@ with tab_data:
     with st.container(border=True):
         # Seleção de colunas para o Master Dataset de exibição
         master_cols = [
-            "nm_dist", "UrbanScore", "n_mob", "central_raw", 
-            "n_crime", "socio_vulnerability_score", "populacao", "dens_demog"
+            "nm_dist",
+            "UrbanScore",
+            "n_mob",
+            "central_raw",
+            "n_crime",
+            "socio_vulnerability_score",
+            "populacao",
+            "dens_demog",
         ]
-        
+
         df_display = df_ranking[master_cols].copy()
         df_display.columns = [
-            "Distrito", "UrbanScore", "Mobilidade (Fluxo)", "Centralidade", 
-            "Crimes (Jan/25)", "IPVS (Vulnerab.)", "População", "Densidade"
+            "Distrito",
+            "UrbanScore",
+            "Mobilidade (Fluxo)",
+            "Centralidade",
+            "Crimes (Jan/25)",
+            "IPVS (Vulnerab.)",
+            "População",
+            "Densidade",
         ]
-        
+
         st.dataframe(
             df_display.sort_values(by="UrbanScore", ascending=False),
             width="stretch",
         )
-        
+
         # Botão de Download para o Master Dataset (Camada Unificada)
-        csv_master = df_master_distritos.to_csv(index=False).encode('utf-8')
+        csv_master = df_master_distritos.to_csv(index=False).encode("utf-8")
         st.download_button(
             label="📥 Baixar Master Dataset Territorial (CSV)",
             data=csv_master,
             file_name="urbanis_master_distritos_sp.csv",
             mime="text/csv",
-            help="Exporta a camada unificada com todos os indicadores consolidados por distrito."
+            help="Exporta a camada unificada com todos os indicadores consolidados por distrito.",
         )
 
     with st.expander("🌍 Impacto Social e Econômico"):
