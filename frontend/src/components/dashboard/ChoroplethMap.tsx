@@ -24,10 +24,9 @@ interface Station {
 }
 
 export function ChoroplethMap() {
-  const { districts, theme } = useUrbanStore();
+  const { districts, theme, activeMapLayer, setActiveMapLayer, selectedSegment } = useUrbanStore();
   const [geoData, setGeoData] = useState<any>(null);
   const [stations, setStations] = useState<Station[]>([]);
-  const [activeLayer, setActiveLayer] = useState<MapLayer>('score');
 
   useEffect(() => {
     fetch("/distritos-sp.geojson")
@@ -51,7 +50,7 @@ export function ChoroplethMap() {
   const getLayerColor = (dData: any) => {
     if (!dData) return theme === 'dark' ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)";
 
-    switch (activeLayer) {
+    switch (activeMapLayer) {
       case 'score':
         return getUrbanScoreColor(dData.UrbanScore || 0);
       case 'crime':
@@ -80,7 +79,7 @@ export function ChoroplethMap() {
       weight: 1,
       opacity: 1,
       color: theme === 'dark' ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
-      fillOpacity: activeLayer === 'mobility' ? 0.4 : 0.8,
+      fillOpacity: activeMapLayer === 'mobility' ? 0.4 : 0.8,
     };
   };
 
@@ -95,7 +94,7 @@ export function ChoroplethMap() {
           <b style="font-size: 12px; color: ${theme === 'dark' ? '#fff' : '#000'}">${dData.nm_dist}</b><br/>
           <span style="opacity: 0.7">URBANSCORE:</span> <b style="color: ${getUrbanScoreColor(score || 0)}">${score?.toFixed(1)}</b><br/>
           <hr style="margin: 4px 0; border: 0; border-top: 1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}" />
-          <span style="opacity: 0.7">FLUXO (Diário):</span> ${dData.n_mob ? (Math.exp(dData.n_mob) - 1).toLocaleString('pt-BR', { maximumFractionDigits: 0 }) : '0'}<br/>
+          <span style="opacity: 0.7">FLUXO (Diário):</span> ${dData.n_mob ? Math.round(Math.exp(dData.n_mob) - 1) + 'k' : '0'}<br/>
           <span style="opacity: 0.7">ESTAÇÕES:</span> ${dData.n_stations || 0}<br/>
           <span style="opacity: 0.7">CRIME:</span> ${dData.n_crime || 0}
         </div>`,
@@ -106,11 +105,11 @@ export function ChoroplethMap() {
     layer.on({
       mouseover: (e: any) => {
         const l = e.target;
-        l.setStyle({ fillOpacity: activeLayer === 'mobility' ? 0.6 : 1, weight: 2, color: "hsl(var(--primary))" });
+        l.setStyle({ fillOpacity: activeMapLayer === 'mobility' ? 0.6 : 1, weight: 2, color: "hsl(var(--primary))" });
       },
       mouseout: (e: any) => {
         const l = e.target;
-        l.setStyle({ fillOpacity: activeLayer === 'mobility' ? 0.4 : 0.8, weight: 1, color: theme === 'dark' ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" });
+        l.setStyle({ fillOpacity: activeMapLayer === 'mobility' ? 0.4 : 0.8, weight: 1, color: theme === 'dark' ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" });
       },
     });
   };
@@ -120,7 +119,7 @@ export function ChoroplethMap() {
   return (
     <div className="w-full h-full relative group">
       <MapContainer
-        key={`${theme}-${activeLayer}`}
+        key={`${theme}-${activeMapLayer}`}
         center={[-23.5505, -46.6333]}
         zoom={11}
         style={{ width: "100%", height: "100%", background: theme === 'dark' ? "#101113" : "#f8fafc" }}
@@ -134,13 +133,14 @@ export function ChoroplethMap() {
           }
         />
         <GeoJSON
+          key={`${theme}-${activeMapLayer}-${selectedSegment}`}
           data={geoData}
           style={mapStyle}
           onEachFeature={onEachFeature}
         />
         
         {/* MOBILITY DOTS (Pontinhos Azuis e Vermelhos) */}
-        {activeLayer === 'mobility' && stations.map((st, i) => (
+        {activeMapLayer === 'mobility' && stations.map((st, i) => (
           <CircleMarker
             key={`st-${i}`}
             center={[st.lat, st.lng]}
@@ -165,26 +165,26 @@ export function ChoroplethMap() {
       {/* Layer Switcher */}
       <div className="absolute top-6 right-6 z-[1000] flex flex-col gap-2">
         <LayerButton 
-          active={activeLayer === 'score'} 
-          onClick={() => setActiveLayer('score')} 
+          active={activeMapLayer === 'score'} 
+          onClick={() => setActiveMapLayer('score')} 
           icon={Target} 
           label="UrbanScore" 
         />
         <LayerButton 
-          active={activeLayer === 'mobility'} 
-          onClick={() => setActiveLayer('mobility')} 
+          active={activeMapLayer === 'mobility'} 
+          onClick={() => setActiveMapLayer('mobility')} 
           icon={TrainFront} 
           label="Mobilidade" 
         />
         <LayerButton 
-          active={activeLayer === 'crime'} 
-          onClick={() => setActiveLayer('crime')} 
+          active={activeMapLayer === 'crime'} 
+          onClick={() => setActiveMapLayer('crime')} 
           icon={Shield} 
           label="Criminalidade" 
         />
         <LayerButton 
-          active={activeLayer === 'age'} 
-          onClick={() => setActiveLayer('age')} 
+          active={activeMapLayer === 'age'} 
+          onClick={() => setActiveMapLayer('age')} 
           icon={Users} 
           label="Idade Média" 
         />
@@ -193,10 +193,10 @@ export function ChoroplethMap() {
       {/* Dynamic Legend */}
       <div className="absolute bottom-6 right-6 bg-card p-5 rounded-lg border border-border z-[1000] min-w-[200px] transition-fast shadow-xl">
         <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest mb-4">
-          {activeLayer === 'mobility' ? 'Infraestrutura Metroferroviária' : 'Escala Territorial'}
+          {activeMapLayer === 'mobility' ? 'Infraestrutura Metroferroviária' : 'Escala Territorial'}
         </p>
         
-        {activeLayer === 'mobility' ? (
+        {activeMapLayer === 'mobility' ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-[#2563EB]"></div>
@@ -214,9 +214,9 @@ export function ChoroplethMap() {
         ) : (
           <div className="flex gap-4">
             <div className="h-32 w-5 rounded-sm" style={{
-              background: activeLayer === 'score' 
-                ? "linear-gradient(to top, #440154, #3b528b, #21918c, #5ec962, #fde725)"
-                : activeLayer === 'crime'
+              background: activeMapLayer === 'score' 
+                ? "linear-gradient(to top, #dc2626, #ea580c, #eab308, #22c55e, #166534)"
+                : activeMapLayer === 'crime'
                   ? "linear-gradient(to top, #fee2e2, #ef4444, #991b1b)"
                   : "linear-gradient(to top, #dbeafe, #2563eb, #1e3a8a)"
             }}></div>

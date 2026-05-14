@@ -7,7 +7,9 @@ interface UrbanStore {
   selectedSegment: string;
   districts: DistrictData[];
   theme: 'dark' | 'light';
+  activeMapLayer: 'score' | 'crime' | 'age' | 'mobility';
   setSegment: (segment: string) => void;
+  setActiveMapLayer: (layer: 'score' | 'crime' | 'age' | 'mobility') => void;
   calculateScores: (segment: string) => void;
   toggleTheme: () => void;
   initTheme: () => void;
@@ -17,10 +19,15 @@ export const useUrbanStore = create<UrbanStore>((set, get) => ({
   selectedSegment: "Logística Last-Mile",
   districts: [],
   theme: (localStorage.getItem('urbanis-theme') as 'dark' | 'light') || 'dark',
+  activeMapLayer: 'score',
 
   setSegment: (segment: string) => {
     set({ selectedSegment: segment });
     get().calculateScores(segment);
+  },
+
+  setActiveMapLayer: (layer: 'score' | 'crime' | 'age' | 'mobility') => {
+    set({ activeMapLayer: layer });
   },
 
   toggleTheme: () => {

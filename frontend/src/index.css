@@ -36,7 +36,7 @@
     
     /* Variable Specific Colors from Python */
     --viz-infra: 221 83% 53%;   /* #2563EB - Blue (Oportunidade) */
-    --viz-market: 221 83% 53%;  /* #2563EB - Blue (Oportunidade) */
+    --viz-market: 262 80% 60%;  /* Purple (Mercado/Centralidade) */
     --viz-risk: 0 84% 60%;      /* #EF4444 - Red (Risco) */
   }
 
@@ -67,7 +67,7 @@
 
     /* Variable Specific Colors from Python */
     --viz-infra: 221 83% 53%;
-    --viz-market: 221 83% 53%;
+    --viz-market: 262 80% 60%;
     --viz-risk: 0 84% 60%;
   }
 }
