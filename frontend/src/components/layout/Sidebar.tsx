@@ -16,7 +16,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 border-r border-white/5 bg-[#101113] text-slate-200 h-screen flex flex-col fixed left-0 top-0 z-50 transition-fast">
       <div className="p-8 pb-4 flex justify-start">
-        <img src={logo} alt="Urbanis Logo" className="h-12 w-auto object-contain brightness-110" />
+        <img src={logo} alt="Urbanis Logo" className="h-13 w-auto object-contain brightness-110" />
       </div>
 
       <nav className="flex-1 mt-8">
@@ -60,7 +60,7 @@ export function Sidebar() {
               ))}
             </select>
           </div>
-          
+
           <div className="p-4 bg-[#101113] border border-white/10 rounded-lg">
             <div className="flex items-center gap-2 text-[9px] font-bold uppercase text-primary mb-2 tracking-widest">
               <ShieldAlert className="w-3.5 h-3.5" />
