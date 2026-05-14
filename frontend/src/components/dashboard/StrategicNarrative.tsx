@@ -1,4 +1,5 @@
 import type { DistrictData } from "@/types";
+import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 
 interface StrategicNarrativeProps {
   topDistrict: DistrictData;
@@ -8,60 +9,82 @@ interface StrategicNarrativeProps {
 export function StrategicNarrative({ topDistrict, segment }: StrategicNarrativeProps) {
   const score = topDistrict.UrbanScore || 0;
   
-  let boxColor, boxBg, statusLabel;
+  let boxColor, boxBg, statusLabel, Icon;
   if (score >= 75) {
-    boxColor = "#22C55E";
-    boxBg = "rgba(34, 197, 94, 0.05)";
+    boxColor = "#10b981";
+    boxBg = "rgba(16, 185, 129, 0.05)";
     statusLabel = "ALTA ADERÊNCIA";
+    Icon = CheckCircle2;
   } else if (score >= 50) {
-    boxColor = "#EAB308";
-    boxBg = "rgba(234, 179, 8, 0.05)";
+    boxColor = "#f59e0b";
+    boxBg = "rgba(245, 158, 11, 0.05)";
     statusLabel = "ADERÊNCIA MODERADA";
+    Icon = AlertTriangle;
   } else {
-    boxColor = "#EF4444";
+    boxColor = "#ef4444";
     boxBg = "rgba(239, 68, 68, 0.05)";
     statusLabel = "BAIXA ADERÊNCIA";
+    Icon = XCircle;
   }
 
-  const cDesc = topDistrict.central_norm > 0.7 ? "Alta Centralidade Econômica" : topDistrict.central_norm > 0.3 ? "Centralidade em Consolidação" : "Baixa Influência Econômica";
-  const mDesc = topDistrict.mob_norm > 0.6 ? "Elevado Fluxo Urbano" : "Fluxo Urbano Localizado";
-  const rDesc = (topDistrict.RiskScore || 0) < 0.4 ? "Risco Operacional Controlado" : "⚠️ Alerta de Risco Estrutural";
+  const cDesc = topDistrict.central_norm > 0.7 ? "Alta Centralidade Econômica" : topDistrict.central_norm > 0.3 ? "Polo em Consolidação" : "Baixa Influência Econômica";
+  const mDesc = topDistrict.mob_norm > 0.6 ? "Fluxo Urbano Elevado" : "Fluxo Urbano Localizado";
+  const rDesc = (topDistrict.RiskScore || 0) < 0.4 ? "Risco Operacional Controlado" : "Alerta de Risco Estrutural";
   const dDesc = topDistrict.dens_norm > 0.6 ? "Alta Densidade de Público" : "Baixa Densidade Populacional";
 
   return (
     <div 
-      className="p-6 rounded-2xl mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6"
-      style={{ backgroundColor: boxBg, borderLeft: `8px solid ${boxColor}` }}
+      className="p-10 rounded-xl border border-white/5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10 transition-fast"
+      style={{ backgroundColor: boxBg, borderLeft: `4px solid ${boxColor}` }}
     >
-      <div className="flex-2">
-        <h2 className="mt-0 mb-2 font-bold flex items-center gap-2" style={{ color: boxColor }}>
-          🎯 {statusLabel}
-        </h2>
-        <p className="text-lg mb-4 text-foreground/80">
-          Segmento: <span className="font-bold">{segment}</span>
-        </p>
-        <h1 className="text-4xl md:text-5xl font-extrabold m-0 text-foreground">
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-4">
+          <Icon className="w-4 h-4" style={{ color: boxColor }} />
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest" style={{ color: boxColor }}>
+            {statusLabel}
+          </span>
+        </div>
+        
+        <h2 className="text-5xl md:text-6xl font-heading text-foreground tracking-tighter uppercase leading-none mb-4">
           {topDistrict.nm_dist}
-        </h1>
-        <p className="mt-4 text-muted-foreground font-medium text-lg">Justificativa de Performance:</p>
-        <ul className="list-disc pl-5 mt-2 space-y-1 text-foreground/90 text-lg">
-          <li><b>Eixo Econômico:</b> {cDesc}.</li>
-          <li><b>Mobilidade:</b> {mDesc}.</li>
-          <li><b>Segurança/Vulnerabilidade:</b> {rDesc}.</li>
-          <li><b>Demografia:</b> {dDesc}.</li>
-        </ul>
+        </h2>
+        
+        <div className="flex items-center gap-4 mb-8">
+          <div className="h-px bg-white/10 flex-1"></div>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.3em]">Auditoria de Performance</span>
+          <div className="h-px bg-white/10 flex-1"></div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+          <NarrativeItem label="Eixo Econômico" value={cDesc} />
+          <NarrativeItem label="Índice de Mobilidade" value={mDesc} />
+          <NarrativeItem label="Perfil de Segurança" value={rDesc} warning={(topDistrict.RiskScore || 0) >= 0.4} />
+          <NarrativeItem label="Demografia" value={dDesc} />
+        </div>
       </div>
 
-      <div className="flex-1 min-w-[200px] text-right bg-card p-6 rounded-xl shadow-sm border">
-        <p className="m-0 text-muted-foreground uppercase text-xs tracking-widest font-semibold mb-1">
-          UrbanScore
-        </p>
-        <h1 className="m-0 text-6xl font-black" style={{ color: boxColor }}>
+      <div className="min-w-[240px] bg-[#101113] p-8 rounded-lg border border-white/5 text-center flex flex-col items-center">
+        <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest mb-2">
+          Score Composto
+        </span>
+        <div className="text-7xl font-mono font-bold tracking-tighter mb-2" style={{ color: boxColor }}>
           {score.toFixed(1)}
-        </h1>
-        <p className="m-0 mt-2 font-bold uppercase text-sm" style={{ color: boxColor }}>
-          {statusLabel}
-        </p>
+        </div>
+        <div className="px-3 py-1 rounded bg-white/5 border border-white/10 text-[9px] font-bold text-muted-foreground tracking-widest uppercase">
+          ESTRATÉGIA: {segment}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NarrativeItem({ label, value, warning }: { label: string, value: string, warning?: boolean }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${warning ? 'bg-red-500' : 'bg-primary'}`}></div>
+      <div>
+        <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-wider mb-0.5">{label}</p>
+        <p className={`text-sm font-medium ${warning ? 'text-red-400' : 'text-foreground'}`}>{value}</p>
       </div>
     </div>
   );

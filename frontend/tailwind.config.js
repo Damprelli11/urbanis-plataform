@@ -6,6 +6,11 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["DM Sans", "sans-serif"],
+        heading: ["DM Sans", "sans-serif"],
+        mono: ["DM Mono", "monospace"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -50,4 +55,3 @@ export default {
   },
   plugins: [],
 }
-

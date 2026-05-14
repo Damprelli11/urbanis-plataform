@@ -2,65 +2,77 @@ import { useUrbanStore } from "@/store/useUrbanStore";
 import { SEGMENTS } from "@/config/segments";
 import { Map, BarChart3, Settings, ShieldAlert } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import logo from "@/assets/urbanis_logo_transparent.png";
 
 export function Sidebar() {
   const { selectedSegment, setSegment } = useUrbanStore();
   const location = useLocation();
 
+  const navItems = [
+    { label: "Visão Geral", to: "/dashboard", icon: BarChart3 },
+    { label: "Comparar Distritos", to: "/compare", icon: Map },
+  ];
+
   return (
-    <aside className="w-64 border-r bg-card h-screen flex flex-col fixed left-0 top-0">
-      <div className="p-6">
-        <h1 className="text-2xl font-bold tracking-tight text-primary">URBANIS</h1>
-        <p className="text-sm text-muted-foreground mt-1">SaaS Territorial Engine</p>
+    <aside className="w-64 border-r border-border bg-card h-screen flex flex-col fixed left-0 top-0 z-50">
+      <div className="p-8 pb-4 flex justify-start">
+        <img src={logo} alt="Urbanis Logo" className="h-12 w-auto object-contain brightness-110" />
       </div>
 
-      <nav className="flex-1 px-4 space-y-2 mt-4">
-        <Link 
-          to="/dashboard"
-          className={`flex items-center gap-3 px-3 py-2 rounded-md font-medium cursor-pointer transition-colors ${location.pathname === '/dashboard' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent/50'}`}
-        >
-          <BarChart3 className="w-4 h-4" />
-          Dashboard (Ranking)
-        </Link>
-        <Link 
-          to="/compare"
-          className={`flex items-center gap-3 px-3 py-2 rounded-md font-medium cursor-pointer transition-colors ${location.pathname === '/compare' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent/50'}`}
-        >
-          <Map className="w-4 h-4" />
-          Compare Districts
-        </Link>
+      <nav className="flex-1 mt-8">
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.to;
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`flex items-center gap-3 px-8 py-3.5 font-medium text-sm transition-fast relative ${isActive
+                ? 'bg-primary/10 text-primary border-l-4 border-primary'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/5 border-l-4 border-transparent'
+                }`}
+            >
+              <item.icon className="w-4 h-4" />
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
 
-      <div className="p-4 border-t">
-        <div className="mb-2">
-          <span className="text-xs font-semibold uppercase text-muted-foreground tracking-wider flex items-center gap-2">
-            <Settings className="w-3 h-3" />
-            Configuração B2B
+      <div className="p-6 border-t border-border bg-[#101113]/40">
+        <div className="mb-4 flex items-center gap-2">
+          <Settings className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-[10px] font-mono font-bold uppercase text-muted-foreground tracking-widest">
+            Configuração
           </span>
         </div>
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Segmento de Mercado</label>
-          <select
-            value={selectedSegment}
-            onChange={(e) => setSegment(e.target.value)}
-            className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            {Object.keys(SEGMENTS).map((segment) => (
-              <option key={segment} value={segment}>
-                {segment}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="mt-4 p-3 bg-secondary rounded-md">
-          <div className="flex items-center gap-2 text-sm font-semibold text-secondary-foreground mb-1">
-            <ShieldAlert className="w-4 h-4 text-primary" />
-            Sensibilidade ao Risco
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-tighter">Segmento de Mercado</label>
+            <select
+              value={selectedSegment}
+              onChange={(e) => setSegment(e.target.value)}
+              className="w-full h-10 rounded-md border border-border bg-[#101113] px-3 py-1 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary transition-fast appearance-none cursor-pointer"
+            >
+              {Object.keys(SEGMENTS).map((segment) => (
+                <option key={segment} value={segment}>
+                  {segment.toUpperCase()}
+                </option>
+              ))}
+            </select>
           </div>
-          <p className="text-xs text-muted-foreground">
-            O segmento atual tem um multiplicador de risco de <span className="font-bold text-foreground">{(SEGMENTS[selectedSegment]?.alpha || 0) * 100}%</span>.
-          </p>
+
+          <div className="p-4 bg-[#101113] border border-border rounded-lg">
+            <div className="flex items-center gap-2 text-[9px] font-bold uppercase text-primary mb-2 tracking-widest">
+              <ShieldAlert className="w-3.5 h-3.5" />
+              Sensibilidade ao Risco
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-mono font-bold text-foreground leading-none">
+                {(SEGMENTS[selectedSegment]?.alpha || 0) * 100}
+              </span>
+              <span className="text-xs font-mono text-muted-foreground">%</span>
+            </div>
+          </div>
         </div>
       </div>
     </aside>
