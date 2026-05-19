@@ -76,27 +76,6 @@ export function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader className="border-b border-border bg-muted/20 py-4">
-            <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Ranking de Performance Global</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 h-[500px] overflow-y-auto overflow-x-hidden custom-scrollbar">
-            <div style={{ height: `${districts.length * 35}px` }}>
-              <RankingChart limit={districts.length} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="border-b border-border bg-muted/20 py-4">
-            <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Matriz de Pesos Efetivos</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 h-[500px]">
-            <CompositionChart />
-          </CardContent>
-        </Card>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3">
@@ -156,40 +135,38 @@ export function Dashboard() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         {activeMapLayer === 'score' ? (
-                          <span 
+                          <span
                             className="text-[9px] font-bold px-2 py-1 rounded uppercase tracking-tighter"
-                            style={{ 
-                              backgroundColor: `${getUrbanScoreColor(d.UrbanScore || 0).replace('rgb', 'rgba').replace(')', ', 0.15)')}`, 
+                            style={{
+                              backgroundColor: `${getUrbanScoreColor(d.UrbanScore || 0).replace('rgb', 'rgba').replace(')', ', 0.15)')}`,
                               color: getUrbanScoreColor(d.UrbanScore || 0),
                               border: `1px solid ${getUrbanScoreColor(d.UrbanScore || 0).replace('rgb', 'rgba').replace(')', ', 0.3)')}`
                             }}
                           >
-                            {d.UrbanScore! >= 80 ? 'Ideal' : 
-                             d.UrbanScore! >= 70 ? 'Excelente' : 
-                             d.UrbanScore! >= 60 ? 'Muito Bom' : 
-                             d.UrbanScore! >= 50 ? 'Bom' : 
-                             d.UrbanScore! >= 40 ? 'Moderado' : 
-                             d.UrbanScore! >= 30 ? 'Regular' : 
-                             d.UrbanScore! >= 20 ? 'Atenção' : 'Crítico'}
+                            {d.UrbanScore! >= 80 ? 'Ideal' :
+                              d.UrbanScore! >= 70 ? 'Excelente' :
+                                d.UrbanScore! >= 60 ? 'Muito Bom' :
+                                  d.UrbanScore! >= 50 ? 'Bom' :
+                                    d.UrbanScore! >= 40 ? 'Moderado' :
+                                      d.UrbanScore! >= 30 ? 'Regular' :
+                                        d.UrbanScore! >= 20 ? 'Atenção' : 'Crítico'}
                           </span>
                         ) : activeMapLayer === 'mobility' ? (
                           <span className="font-mono text-sm font-bold text-foreground">
                             {d.n_stations || 0}
                           </span>
                         ) : activeMapLayer === 'crime' ? (
-                          <span className={`text-[9px] font-bold px-2 py-1 rounded uppercase tracking-tighter ${
-                            (d.n_crime || 0) > 800 ? 'bg-red-600/10 text-red-600 border border-red-600/20' :
+                          <span className={`text-[9px] font-bold px-2 py-1 rounded uppercase tracking-tighter ${(d.n_crime || 0) > 800 ? 'bg-red-600/10 text-red-600 border border-red-600/20' :
                             (d.n_crime || 0) > 400 ? 'bg-red-400/10 text-red-400 border border-red-400/20' :
-                            'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                          }`}>
+                              'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                            }`}>
                             {(d.n_crime || 0) > 800 ? 'Risco Crítico' : (d.n_crime || 0) > 400 ? 'Alto Risco' : 'Risco Moderado'}
                           </span>
                         ) : (
-                          <span className={`text-[9px] font-bold px-2 py-1 rounded uppercase tracking-tighter ${
-                            (d.id_media || 0) >= 60 ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20' :
+                          <span className={`text-[9px] font-bold px-2 py-1 rounded uppercase tracking-tighter ${(d.id_media || 0) >= 60 ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20' :
                             (d.id_media || 0) >= 30 ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
-                            'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20'
-                          }`}>
+                              'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20'
+                            }`}>
                             {(d.id_media || 0) >= 60 ? 'Sênior' : (d.id_media || 0) >= 30 ? 'Adulto' : 'Jovem'}
                           </span>
                         )}
@@ -204,6 +181,29 @@ export function Dashboard() {
             </div>
           </Card>
         </div>
+      </div>
+
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
+          <CardHeader className="border-b border-border bg-muted/20 py-4">
+            <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Ranking de Performance Global</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 h-[500px] overflow-y-auto overflow-x-hidden custom-scrollbar">
+            <div style={{ height: `${districts.length * 35}px` }}>
+              <RankingChart limit={districts.length} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="border-b border-border bg-muted/20 py-4">
+            <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Matriz de Pesos Efetivos</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 h-[500px]">
+            <CompositionChart />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
