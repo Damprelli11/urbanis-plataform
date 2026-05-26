@@ -595,6 +595,28 @@ df = df.merge(df_ipvs_cons, on="nm_dist", how="left").fillna(
 # Consolida a última visão de cada distrito com todos os scores
 df_master_distritos = df.sort_values("ano").groupby("nm_dist").last().reset_index()
 
+def min_max_scale_export(series):
+    if series.max() == series.min():
+        return series * 0
+    return (series - series.min()) / (series.max() - series.min())
+
+def smooth_centrality_export(val):
+    return 1 / (1 + np.exp(-8 * (val - 0.5)))
+
+df_master_distritos["central_raw"] = df_master_distritos["nm_dist"].map(MAPA_CENTRALIDADE).fillna(0.30)
+df_master_distritos["central_norm"] = df_master_distritos["central_raw"].apply(smooth_centrality_export)
+df_master_distritos["dens_norm"] = min_max_scale_export(df_master_distritos["dens_demog"])
+df_master_distritos["mob_norm"] = min_max_scale_export(df_master_distritos["n_mob"])
+df_master_distritos["pop_norm"] = min_max_scale_export(df_master_distritos["populacao"])
+df_master_distritos["idade_norm"] = min_max_scale_export(df_master_distritos["id_media"])
+df_master_distritos["crime_norm"] = min_max_scale_export(df_master_distritos["n_crime"])
+df_master_distritos["vulner_norm"] = min_max_scale_export(df_master_distritos["socio_vulnerability_score"])
+
+import os
+# Criar diretório caso não exista e exportar o JSON para o frontend
+os.makedirs("../frontend/src/data", exist_ok=True)
+df_master_distritos.to_json("../frontend/src/data/urbanis_data.json", orient="records", force_ascii=False)
+
 # =========================================================
 # SIDEBAR
 # =========================================================
