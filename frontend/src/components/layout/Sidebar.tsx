@@ -1,10 +1,15 @@
 import { useUrbanStore, PROFILES } from "@/store/useUrbanStore";
-import { Map, BarChart3, Settings, Target } from "lucide-react";
+import { Map, BarChart3, Settings, Target, FolderPlus, Pencil, Trash2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import logo from "@/assets/urbanis_logo_transparent.png";
 
-export function Sidebar() {
-  const { projects, activeProjectId } = useUrbanStore();
+interface SidebarProps {
+  onNewProject: () => void;
+  onEditProject: (id: string) => void;
+}
+
+export function Sidebar({ onNewProject, onEditProject }: SidebarProps) {
+  const { projects, activeProjectId, selectProject, deleteProject } = useUrbanStore();
   const location = useLocation();
 
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
@@ -21,7 +26,7 @@ export function Sidebar() {
         <img src={logo} alt="Urbanis Logo" className="h-13 w-auto object-contain brightness-110" />
       </div>
 
-      <nav className="flex-1 mt-8">
+      <nav className="mt-4">
         {navItems.map((item) => {
           const isActive = location.pathname === item.to;
           return (
@@ -40,12 +45,82 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Seção de Gestão de Estudos (UX Upgrade) */}
+      <div className="flex-1 px-6 py-6 mt-4 border-t border-white/5 flex flex-col min-h-0">
+        <div className="flex items-center justify-between text-[10px] font-mono font-bold uppercase text-slate-500 tracking-wider mb-3 px-2">
+          <span>Meus Estudos</span>
+          <button 
+            onClick={onNewProject}
+            className="p-1 text-slate-400 hover:text-primary hover:bg-white/5 rounded transition-fast active:scale-95"
+            title="Novo Estudo Territorial"
+          >
+            <FolderPlus className="w-4 h-4" />
+          </button>
+        </div>
+        
+        <div className="space-y-1 overflow-y-auto flex-1 pr-1 scrollbar-thin scrollbar-thumb-white/5">
+          {projects.map((p) => {
+            const isActive = p.id === activeProjectId;
+            return (
+              <div 
+                key={p.id}
+                onClick={() => selectProject(p.id)}
+                className={`flex items-center justify-between p-2 rounded cursor-pointer transition-fast group ${
+                  isActive 
+                    ? 'bg-primary/10 border-l-2 border-primary' 
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <div className="flex-1 min-w-0 pr-1">
+                  <div className={`text-xs truncate font-sans capitalize transition-fast ${
+                    isActive ? 'text-white font-bold' : 'text-slate-300 group-hover:text-white'
+                  }`}>
+                    {p.name}
+                  </div>
+                  <div className={`text-[9px] font-mono uppercase tracking-wider truncate transition-fast ${
+                    isActive ? 'text-slate-300' : 'text-slate-500 group-hover:text-slate-400'
+                  }`}>
+                    {p.segment}
+                  </div>
+                </div>
+                
+                {/* Ações Rápidas no Hover */}
+                <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-fast">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditProject(p.id);
+                    }}
+                    className="p-0.5 hover:text-primary rounded hover:bg-white/5 text-slate-500 transition-fast"
+                    title="Editar Estudo"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                  {projects.length > 1 && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteProject(p.id);
+                      }}
+                      className="p-0.5 hover:text-red-500 rounded hover:bg-white/5 text-slate-500 transition-fast"
+                      title="Excluir Estudo"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {activeProject && (
         <div className="p-6 border-t border-white/5 bg-[#16181B]/40 space-y-4">
           <div className="flex items-center gap-2">
             <Settings className="w-3.5 h-3.5 text-slate-500" />
             <span className="text-[10px] font-mono font-bold uppercase text-slate-500 tracking-widest">
-              Contexto do Projeto
+              Contexto do Estudo
             </span>
           </div>
 

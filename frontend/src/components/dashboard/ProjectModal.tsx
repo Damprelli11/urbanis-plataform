@@ -256,7 +256,7 @@ export function ProjectModal({ isOpen, onClose, editProjectId }: ProjectModalPro
             </button>
             <button 
               type="submit"
-              className="h-11 px-6 bg-primary hover:brightness-110 text-white text-xs font-bold uppercase tracking-widest rounded-md transition-fast active:scale-95"
+              className="h-11 px-6 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-widest rounded-md transition-fast active:scale-95"
             >
               {isEditing ? "Salvar Alterações" : "Confirmar Projeto"}
             </button>
