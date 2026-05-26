@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useUrbanStore } from "@/store/useUrbanStore";
 import { getUrbanScoreColor } from "@/lib/colors";
 import { MapContainer, TileLayer, GeoJSON, useMap, CircleMarker, Tooltip as LeafletTooltip } from "react-leaflet";
@@ -14,7 +14,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-type MapLayer = 'score' | 'crime' | 'age' | 'mobility';
+
 
 interface Station {
   name: string;
@@ -24,7 +24,7 @@ interface Station {
 }
 
 export function ChoroplethMap() {
-  const { districts, theme, activeMapLayer, setActiveMapLayer, selectedSegment } = useUrbanStore();
+  const { districts, theme, activeMapLayer, setActiveMapLayer, activeProjectId } = useUrbanStore();
   const [geoData, setGeoData] = useState<any>(null);
   const [stations, setStations] = useState<Station[]>([]);
 
@@ -133,7 +133,7 @@ export function ChoroplethMap() {
           }
         />
         <GeoJSON
-          key={`${theme}-${activeMapLayer}-${selectedSegment}`}
+          key={`${theme}-${activeMapLayer}-${activeProjectId}`}
           data={geoData}
           style={mapStyle}
           onEachFeature={onEachFeature}

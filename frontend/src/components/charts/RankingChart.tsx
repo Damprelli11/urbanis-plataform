@@ -49,7 +49,7 @@ export function RankingChart({ limit = 10 }: RankingChartProps) {
                 fontFamily: "DM Mono",
                 boxShadow: "none"
               }}
-              formatter={(value: number) => [value.toFixed(1), "URBANSCORE"]}
+              formatter={(value: any) => [Number(value).toFixed(1), "ADERÊNCIA (%)"]}
             />
             <Bar
               dataKey="UrbanScore"
@@ -60,7 +60,7 @@ export function RankingChart({ limit = 10 }: RankingChartProps) {
                 fill: "currentColor", 
                 fontSize: 10, 
                 fontFamily: "DM Mono",
-                formatter: (v: number) => v.toFixed(1) 
+                formatter: (v: any) => Number(v).toFixed(1) 
               }}
               className="text-foreground"
             >

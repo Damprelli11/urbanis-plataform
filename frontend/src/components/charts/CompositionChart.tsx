@@ -1,5 +1,4 @@
-import { useUrbanStore } from "@/store/useUrbanStore";
-import { SEGMENTS } from "@/config/segments";
+import { useUrbanStore, PROFILES } from "@/store/useUrbanStore";
 import {
   PieChart,
   Pie,
@@ -10,15 +9,21 @@ import {
 } from "recharts";
 
 export function CompositionChart() {
-  const { selectedSegment } = useUrbanStore();
-  const weights = SEGMENTS[selectedSegment];
+  const { projects, activeProjectId } = useUrbanStore();
+  
+  const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
+  if (!activeProject) return null;
 
-  if (!weights) return null;
+  const profileData = PROFILES[activeProject.profile];
+  if (!profileData) return null;
+
+  const { weights } = profileData;
+  const { infra, market, balance, alpha } = weights;
 
   const data = [
-    { name: "INFRAESTRUTURA", value: (weights.infra.dens + weights.infra.mob) * weights.balance.infra * 100, color: "hsl(var(--viz-infra))" },
-    { name: "POTENCIAL MERCADO", value: (weights.market.central + weights.market.pop + weights.market.idade) * weights.balance.market * 100, color: "hsl(var(--viz-market))" },
-    { name: "PERFIL DE RISCO", value: weights.alpha * 100, color: "hsl(var(--viz-risk))" }
+    { name: "INFRAESTRUTURA", value: (infra.dens + infra.mob) * balance.infra * 100, color: "hsl(var(--viz-infra))" },
+    { name: "POTENCIAL MERCADO", value: (market.central + market.pop + market.idade) * balance.market * 100, color: "hsl(var(--viz-market))" },
+    { name: "PERFIL DE RISCO (α)", value: alpha * 100, color: "hsl(var(--viz-risk))" }
   ];
 
   return (
@@ -50,11 +55,11 @@ export function CompositionChart() {
                 fontFamily: "DM Mono",
                 boxShadow: "none"
               }}
-              formatter={(value: number) => [`${value.toFixed(1)}%`, "PESO"]}
+              formatter={(value: any) => [`${Number(value).toFixed(1)}%`, "PESO"]}
             />
             <Legend 
               verticalAlign="bottom" 
-              height={36} 
+              height={45} 
               iconType="circle"
               formatter={(value) => <span className="text-[10px] font-bold text-muted-foreground font-mono">{value}</span>}
             />
