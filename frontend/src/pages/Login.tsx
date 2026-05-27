@@ -38,13 +38,14 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0b0d] relative overflow-hidden font-sans p-4">
-      {/* Premium ambient decorative glowing orbs */}
-      <div className="absolute top-1/4 left-1/4 w-[450px] h-[450px] rounded-full bg-primary/10 blur-[120px] pointer-events-none animate-pulse duration-[6000ms]"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none animate-pulse duration-[8000ms]"></div>
+    <div className="dark w-full min-h-screen bg-[#0a0b0d]">
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#0a0b0d] text-foreground relative overflow-hidden font-sans p-4">
+        {/* Premium ambient decorative glowing orbs */}
+        <div className="absolute top-1/4 left-1/4 w-[450px] h-[450px] rounded-full bg-primary/10 blur-[120px] pointer-events-none animate-pulse duration-[6000ms]"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none animate-pulse duration-[8000ms]"></div>
 
-      {/* Main card */}
-      <div className="w-full max-w-md bg-card/45 border border-border backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col p-8 z-10 animate-in fade-in duration-500 scale-in duration-300">
+        {/* Main card */}
+        <div className="w-full max-w-md bg-card/45 border border-border backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col p-8 z-10 animate-in fade-in duration-500 scale-in duration-300">
         
         {/* Logo and Branding header */}
         <header className="flex flex-col items-center mb-8">
@@ -158,5 +159,6 @@ export function Login() {
 
       </div>
     </div>
+  </div>
   );
 }

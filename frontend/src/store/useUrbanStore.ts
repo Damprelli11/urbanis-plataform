@@ -121,7 +121,7 @@ export const useUrbanStore = create<UrbanStore>((set, get) => ({
   user: null,
   session: null,
   authLoading: true,
-  offlineMode: true,
+  offlineMode: false,
 
   initAuth: async () => {
     if (!isSupabaseConfigured) {
@@ -144,7 +144,7 @@ export const useUrbanStore = create<UrbanStore>((set, get) => ({
         set({ 
           session: newSession,
           user: newSession?.user ?? null,
-          offlineMode: !newSession,
+          offlineMode: false,
           authLoading: false
         });
 
@@ -172,7 +172,7 @@ export const useUrbanStore = create<UrbanStore>((set, get) => ({
       } else {
         const localProjs = loadSavedProjects();
         set({ 
-          offlineMode: true, 
+          offlineMode: false, 
           authLoading: false,
           projects: localProjs,
           activeProjectId: loadSavedActiveProjectId(localProjs)
@@ -183,7 +183,7 @@ export const useUrbanStore = create<UrbanStore>((set, get) => ({
       console.error("Erro na inicialização do Supabase Auth:", e);
       const localProjs = loadSavedProjects();
       set({ 
-        offlineMode: true, 
+        offlineMode: false, 
         authLoading: false,
         projects: localProjs,
         activeProjectId: loadSavedActiveProjectId(localProjs)
