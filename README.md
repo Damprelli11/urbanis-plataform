@@ -1,208 +1,81 @@
-# Fundação Escola de Comércio Álvares Penteado
+# 📊 Urbanis Dashboard — Frontend Analítico
 
-# 🚀 UrbanData Analytics
-
-## 🌆 Plataforma SaaS para Análise Territorial, Risco e Potencial Econômico
-
-Projeto desenvolvido no Projeto Interdisciplinar (PI) do curso de Análise e Desenvolvimento de Sistemas – 4º semestre.
-
-A **UrbanData Analytics** é uma plataforma digital no modelo **SaaS (Software as a Service)** criada para auxiliar empresas, gestores e empreendedores na análise de bairros, cidades e regiões.  
-A solução utiliza dados públicos, estatística, dashboards e algoritmos próprios para apoiar decisões estratégicas sobre localização, expansão, risco territorial e potencial econômico.
+Este é o diretório da interface **SaaS/BI** do projeto Urbanis. Desenvolvido com uma stack moderna de alta performance para visualização de dados territoriais e inteligência de localização.
 
 ---
 
-## 👥 Equipe
+## 🎨 Design System & UX
 
-| Nome | Perfil |
-|---|---|
-| Pedro Augusto da Silva Macedo | [LinkedIn](https://www.linkedin.com/in/pedro-augusto-da-silva-macedo-9a0200187/) |
-| Cassio Gonçalves Gama | [LinkedIn](https://www.linkedin.com/in/cassio-gama/) |
-| Henrique Jorge Martins Figueiredo | [LinkedIn](https://www.linkedin.com/in/henrique-jorge-2b977726b/) |
-| Renan Damprelli Cardoso da Silva | [LinkedIn](https://www.linkedin.com/in/renan-damprelli/) |
-| Luiz Eduardo Souza Rocha | [LinkedIn](https://www.linkedin.com/in/luiz-eduardo-souza-rocha-09aab2321/) |
-
-
-## 📝 Descrição do Projeto
-
-A **UrbanData Analytics** desenvolve uma plataforma Web SaaS responsiva voltada para a análise territorial inteligente.  
-O sistema reúne dados de fontes públicas, como **IBGE, INMET, Segurança Pública e Receita Federal**, permitindo que o usuário visualize informações relevantes por meio de gráficos, mapas interativos e indicadores estratégicos.
-
-A plataforma possui três modelos principais:
-
-- **UrbanScore:** algoritmo de potencial econômico de uma região.
-- **UrbanRisk:** modelo de avaliação de riscos territoriais.
-- **UrbanGrowth:** modelo estatístico para previsão de crescimento com base em séries temporais.
-
-Com isso, o projeto busca facilitar a tomada de decisão para empresas, investidores e usuários que precisam entender melhor uma determinada localidade antes de iniciar ou expandir um negócio.
+A interface foi projetada seguindo os princípios de **Dashboards de Alta Densidade**:
+- **Estética Enterprise**: Cores sóbrias, tipografia técnica (`DM Mono` para dados) e headers condensados.
+- **Dual Theme**: Suporte total a **Dark Mode** (default para análise) e **Light Mode** (para relatórios e leitura).
+- **Semântica Analítica**: Escala de cores `Viridis` e thresholds determinísticos para evitar falsas interpretações de performance.
 
 ---
 
-## 🎯 Objetivos
+## 🛠️ Stack Tecnológica
 
-- Criar uma plataforma Web SaaS para análise de bairros e cidades.
-- Utilizar dados públicos para gerar informações estratégicas.
-- Desenvolver dashboards com gráficos e mapas interativos.
-- Criar algoritmos para análise de potencial, risco e crescimento territorial.
-- Apoiar decisões de expansão comercial e escolha de localização.
-- Oferecer planos de uso: Básico, Pro e Premium.
-- Garantir segurança, autenticação, logs e controle de acesso.
-- Realizar o deploy final da aplicação em ambiente de nuvem de baixo custo.
-
----
-
-## ⚙️ Funcionalidades
-
-### 👤 Usuários
-
-- Cadastro e login na plataforma.
-- Consulta de bairros, cidades e regiões.
-- Visualização de indicadores territoriais.
-- Acesso a dashboards e gráficos.
-- Exportação de dados e relatórios.
-- Uso conforme o plano contratado: Básico, Pro ou Premium.
-
-### 📊 Dashboards e Mapas
-
-- Visualização de gráficos econômicos e territoriais.
-- Mapas interativos criados com base na jornada do usuário.
-- Comparação entre bairros e cidades.
-- Exibição de dados de risco, crescimento e potencial econômico.
-
-### 🧠 Algoritmos Inteligentes
-
-- **UrbanScore:** calcula o potencial econômico da região em uma escala de 0 a 100.
-- **UrbanRisk:** avalia riscos territoriais com base em dados externos.
-- **UrbanGrowth:** utiliza séries temporais para prever tendências de crescimento.
+- **Core**: [React 18](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/)
+- **Build Tool**: [Vite](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Shadcn/UI](https://ui.shadcn.com/)
+- **Maps**: [React-Leaflet](https://react-leaflet.js.org/)
+- **Charts**: [Recharts](https://recharts.org/)
+- **State**: [Zustand](https://github.com/pmndrs/zustand) (Gerenciamento de filtros e temas)
+- **Icons**: [Lucide React](https://lucide.dev/)
 
 ---
 
-## 🧠 Dados e Análise
+## 🚀 Funcionalidades Principais
 
-A plataforma utiliza dados públicos e processos de tratamento para transformar informações brutas em indicadores úteis.
+### 🗺️ Geo-Intelligence (ChoroplethMap)
+Mapa interativo com troca dinâmica de camadas:
+- **UrbanScore**: Aderência estratégica (Escala Viridis).
+- **Mobilidade**: Fluxo de passageiros e estações (Metrô/Trem 🔵🔴).
+- **Segurança**: Calor de ocorrências criminais (Reds).
+- **Idade Média**: Perfil demográfico (Blues).
 
-Fontes previstas:
+### 📈 Dashboard & Rankings
+- Gráficos de barra dinâmicos com suporte a até 30 distritos.
+- KPIs em tempo real baseados no segmento de negócio selecionado.
+- Recomendações narrativas automatizadas via motor analítico.
 
-- IBGE
-- INMET
-- Segurança Pública
-- Receita Federal / CNPJ
-- Outras bases públicas complementares
-
-Processos aplicados:
-
-- Coleta de dados
-- Limpeza
-- Padronização
-- Organização em banco de dados territorial
-- Geração de indicadores
-- Visualização em dashboards
+### 🔍 Auditoria Cruzada (Compare)
+Módulo dedicado para comparação técnica entre dois distritos, com matriz de performance e detalhamento de infraestrutura vs. mercado.
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## 📂 Estrutura de Pastas
 
-- **Front-End:** React.js / Vite / Tailwind CSS
-- **Back-End:** Node.js / Express
-- **Banco de Dados:** Banco territorial centralizado
-- **Design:** Figma
-- **Gráficos:** Bibliotecas de visualização de dados
-- **Hospedagem:** Nuvem de baixo custo
-- **Segurança:** SSL, autenticação, logs e controle de acesso
-- **Análise de Dados:** Python, Pandas, modelos estatísticos e séries temporais
-
----
-
-## 🔐 Segurança
-
-O projeto considera práticas básicas de segurança para proteção da aplicação e dos dados.
-
-Medidas previstas:
-
-- Autenticação de usuários
-- Controle de acesso por plano
-- Uso de SSL
-- Registro de logs
-- Proteção contra acessos indevidos
-- Backup e recuperação de dados
-- Monitoramento da aplicação em produção
+- `src/components/charts`: Componentes Recharts customizados.
+- `src/components/dashboard`: Componentes geospaciais e mapa.
+- `src/components/layout`: Sidebar, Layout e navegação.
+- `src/pages`: Páginas de Dashboard, Comparação e Configurações.
+- `src/store`: Estado global via Zustand.
+- `src/data`: JSON consolidado gerado pelo motor Python.
+- `scripts`: Utilitários para processamento de GeoJSON e coordenadas.
 
 ---
 
-## 📌 Gestão do Projeto
+## 🔧 Como Iniciar
 
-Durante o desenvolvimento foram aplicados conceitos de gestão de projetos, como:
+1. **Instale as dependências**:
+   ```bash
+   npm install
+   ```
 
-- Definição do objetivo
-- Alinhamento estratégico
-- Project Charter
-- Identificação de stakeholders
-- Plano de comunicação
-- Cronograma
-- Gestão de riscos
-- Controle de custos previstos e reais
-- Encerramento do MVP
+2. **Certifique-se de que o arquivo de dados existe**:
+   Verifique se `src/data/urbanis_data.json` foi gerado pelo motor principal.
 
----
+3. **Inicie o servidor de desenvolvimento**:
+   ```bash
+   npm run dev
+   ```
 
-## ⚠️ Plano de Riscos
-
-Foram identificados riscos relacionados ao funcionamento da plataforma, como:
-
-- API cair
-- Servidor cair
-- Aplicação com bug
-- Falha em backup
-- Perda de arquivo
-- Erro no banco de dados
-- Limite da nuvem
-- Acesso indevido
-- Dados incorretos
-- Falha na integração
-- Erro visual na interface
-- Falha na exportação
-- Gráficos com erro
-- Cálculo incorreto nos algoritmos
-- Erro no deploy
-- Documentação incompleta
-
-Esses riscos possuem estratégias de resposta como **mitigar, evitar, transferir ou aceitar**, além de planos de prevenção e contingência.
+4. **Build para Produção**:
+   ```bash
+   npm run build
+   ```
 
 ---
 
-## 🚀 Possíveis Extensões
-
-- Integração com novas bases públicas e privadas.
-- Criação de relatórios automáticos em PDF.
-- Comparação avançada entre regiões.
-- Painel administrativo para controle dos usuários.
-- Sistema de assinatura com pagamento integrado.
-- Alertas automáticos sobre mudanças em indicadores territoriais.
-- Módulo de recomendação de melhores regiões para expansão comercial.
-
----
-
-## 📁 Estrutura do Projeto
-
-```bash
-UrbanData/
-├── Documentos/
-│   ├── Entrega 1/
-│   │   ├── Cibersegurança e Defesa Cibernética/
-│   │   ├── Ciência de Dados e Big Data/
-│   │   ├── Empreendedorismo e Transformação Digital/
-│   │   ├── Gestão de Projetos de Software/
-│   │   └── Inteligência Artificial e Machine Learning/
-│   ├── Entrega 2/
-│   │   ├── Cibersegurança e Defesa Cibernética/
-│   │   ├── Ciência de Dados e Big Data/
-│   │   ├── Empreendedorismo e Transformação Digital/
-│   │   ├── Gestão de Projetos de Software/
-│   │   └── Inteligência Artificial e Machine Learning/
-│   └── Banner/
-│       └── banner_final.pdf
-├── src/
-│   ├── backend/
-│   ├── frontend/
-│   └── database/
-├── README.md
-└── .gitignore
+Desenvolvido por **FourWave** | 🎓 _Urban Intelligence Platform_
