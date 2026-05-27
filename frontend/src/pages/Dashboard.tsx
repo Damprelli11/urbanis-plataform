@@ -4,11 +4,11 @@ import { RankingChart } from "@/components/charts/RankingChart";
 import { CompositionChart } from "@/components/charts/CompositionChart";
 import { ChoroplethMap } from "@/components/dashboard/ChoroplethMap";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { MapPin, Users, Activity, Target, ArrowUpRight } from "lucide-react";
+import { MapPin, Users, Activity, Target, ArrowUpRight, Printer, Info } from "lucide-react";
 import { getUrbanScoreColor } from "@/lib/colors";
 
 export function Dashboard() {
-  const { districts, selectedSegment, activeMapLayer } = useUrbanStore();
+  const { districts, activeProjectId, projects, activeMapLayer } = useUrbanStore();
 
   if (!districts || districts.length === 0) {
     return (
@@ -21,33 +21,57 @@ export function Dashboard() {
     );
   }
 
+  const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
+
+
   const topDistrict = districts[0];
   const totalPop = districts.reduce((acc, d) => acc + (d.populacao || 0), 0);
   const avgDens = districts.reduce((acc, d) => acc + (d.dens_demog || 0), 0) / districts.length;
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
-    <div className="space-y-10 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded border border-primary/20 uppercase tracking-tighter">Análise em Tempo Real</span>
+    <div className="space-y-10 animate-in fade-in duration-500 print:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 print:border-b print:pb-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 print:hidden">
+            <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded border border-primary/20 uppercase tracking-wider">
+              Análise Contextual Territorial
+            </span>
           </div>
-          <h1 className="text-4xl font-heading text-foreground tracking-tight leading-none">Visão Geral do Mercado</h1>
-          <p className="text-muted-foreground mt-3 max-w-xl font-medium">
-            Inteligência territorial e matriz de viabilidade para o segmento <b className="text-foreground uppercase">{selectedSegment}</b> em São Paulo.
-          </p>
+          <h1 className="text-3xl font-heading text-foreground tracking-tight leading-none uppercase font-black">
+            {activeProject ? activeProject.name : "Estudo de Aderência"}
+          </h1>
+          {activeProject && (
+            <div className="text-muted-foreground font-medium text-xs flex flex-wrap gap-x-4 gap-y-1.5 items-center pt-1">
+              <span>Segmento: <b className="text-foreground uppercase">{activeProject.segment}</b></span>
+              <span className="opacity-20">|</span>
+              <span>Objetivo: <b className="text-foreground">{activeProject.strategicGoal}</b></span>
+            </div>
+          )}
         </div>
 
-        <div className="flex gap-3">
-          <button className="h-10 px-4 bg-primary text-white text-xs font-bold uppercase tracking-widest rounded-md hover:brightness-110 transition-fast active:scale-95">
-            Exportar Relatório
+        <div className="flex gap-3 print:hidden">
+          <button 
+            onClick={handlePrint}
+            className="h-10 px-4 bg-primary text-white text-xs font-bold uppercase tracking-widest rounded-md hover:brightness-110 transition-fast active:scale-95 flex items-center gap-2"
+          >
+            <Printer className="w-4 h-4" />
+            Salvar Estudo (PDF)
           </button>
         </div>
       </div>
 
-      <StrategicNarrative topDistrict={topDistrict} segment={selectedSegment} />
+      {/* Strategic Box */}
+      <div className="print:break-inside-avoid">
+        <StrategicNarrative topDistrict={topDistrict} segment={activeProject?.segment || "Geral"} />
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 print:grid-cols-4 print:gap-4 print:break-inside-avoid">
         <StatCard
           title="Distritos Analisados"
           value={districts.length.toString()}
@@ -68,31 +92,32 @@ export function Dashboard() {
           trend="-0.4%"
         />
         <StatCard
-          title="Top UrbanScore"
+          title="Top Aderência"
           value={topDistrict.UrbanScore?.toFixed(1) || "0"}
+          unit="%"
           icon={Target}
           trend="+1.2%"
           primary
         />
       </div>
 
-
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3">
+      {/* Map & Top 10 Table */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 print:grid-cols-1 print:gap-4">
+        <div className="lg:col-span-3 print:hidden">
           <Card className="h-full">
             <CardHeader className="border-b border-border bg-muted/20 py-4">
-              <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Distribuição Territorial Multicamada</CardTitle>
+              <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Distribuição Territorial de Aderência</CardTitle>
             </CardHeader>
-            <CardContent className="p-0 h-[650px]">
+            <CardContent className="p-0 h-[600px]">
               <ChoroplethMap />
             </CardContent>
           </Card>
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 print:break-inside-avoid">
           <Card className="h-full flex flex-col">
             <CardHeader className="border-b border-border bg-muted/20 py-4">
-              <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Top 10 Polos de Performance</CardTitle>
+              <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Top 10 Polos de Aderência</CardTitle>
             </CardHeader>
             <div className="flex-1 overflow-auto">
               <table className="w-full text-left border-collapse">
@@ -100,7 +125,7 @@ export function Dashboard() {
                   <tr className="border-b border-border bg-muted/40">
                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Distrito</th>
                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {activeMapLayer === 'mobility' ? 'Fluxo/Dia' : activeMapLayer === 'crime' ? 'Ocorrências' : activeMapLayer === 'age' ? 'Idade Média' : 'Score'}
+                      {activeMapLayer === 'mobility' ? 'Fluxo/Dia' : activeMapLayer === 'crime' ? 'Ocorrências' : activeMapLayer === 'age' ? 'Idade Média' : 'Aderência'}
                     </th>
                     <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">
                       {activeMapLayer === 'mobility' ? 'Nº Estações' : activeMapLayer === 'crime' ? 'Nível de Risco' : activeMapLayer === 'age' ? 'Perfil' : 'Status'}
@@ -129,7 +154,7 @@ export function Dashboard() {
                               ? d.n_crime?.toLocaleString('pt-BR') || 0
                               : activeMapLayer === 'age'
                                 ? `${d.id_media?.toFixed(1)} anos`
-                                : d.UrbanScore?.toFixed(1)
+                                : `${d.UrbanScore?.toFixed(1)}%`
                           }
                         </span>
                       </td>
@@ -176,18 +201,15 @@ export function Dashboard() {
                 </tbody>
               </table>
             </div>
-            <div className="p-4 border-t border-border bg-muted/20 flex justify-center">
-              <button className="text-[10px] font-mono font-bold uppercase text-muted-foreground hover:text-primary transition-fast">Auditoria Territorial Completa</button>
-            </div>
           </Card>
         </div>
       </div>
 
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Chart Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:grid-cols-1 print:gap-4 print:break-inside-avoid">
         <Card className="lg:col-span-2">
           <CardHeader className="border-b border-border bg-muted/20 py-4">
-            <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Ranking de Performance Global</CardTitle>
+            <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Ranking de Aderência por Distrito</CardTitle>
           </CardHeader>
           <CardContent className="pt-6 h-[500px] overflow-y-auto overflow-x-hidden custom-scrollbar">
             <div style={{ height: `${districts.length * 35}px` }}>
@@ -196,9 +218,15 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="border-b border-border bg-muted/20 py-4">
-            <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Matriz de Pesos Efetivos</CardTitle>
+        <Card className="print:break-inside-avoid">
+          <CardHeader className="border-b border-border bg-muted/20 py-4 flex flex-row items-center justify-between">
+            <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Matriz de Ponderação Lógica</CardTitle>
+            <div className="relative group/info">
+              <Info className="w-3.5 h-3.5 text-muted-foreground cursor-pointer" />
+              <div className="absolute right-0 bottom-6 hidden group-hover/info:block w-48 bg-background border border-border p-2.5 rounded shadow-lg text-[9px] leading-relaxed text-muted-foreground z-10">
+                Ponderadores fixados com base no perfil operacional metodológico de segmento, impossibilitando arbitrariedade de sliders manuais.
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="pt-6 h-[500px]">
             <CompositionChart />
@@ -213,11 +241,11 @@ function StatCard({ title, value, unit, icon: Icon, trend, primary }: any) {
   return (
     <Card className={`relative overflow-hidden transition-fast group hover:border-primary/50 ${primary ? 'border-primary/30 bg-primary/5' : ''}`}>
       <CardContent className="pt-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 print:mb-2">
           <div className={`p-2 rounded ${primary ? 'bg-primary text-white' : 'bg-muted text-muted-foreground group-hover:text-primary transition-fast'}`}>
             <Icon className="w-4 h-4" />
           </div>
-          <div className={`flex items-center gap-1 text-[10px] font-bold font-mono ${trend.startsWith('+') ? 'text-emerald-500' : 'text-red-500'}`}>
+          <div className={`flex items-center gap-1 text-[10px] font-bold font-mono ${trend.startsWith('+') ? 'text-emerald-500' : 'text-red-500'} print:hidden`}>
             <ArrowUpRight className={`w-3 h-3 ${trend.startsWith('+') ? '' : 'rotate-90'}`} />
             {trend}
           </div>
@@ -233,4 +261,3 @@ function StatCard({ title, value, unit, icon: Icon, trend, primary }: any) {
     </Card>
   );
 }
-

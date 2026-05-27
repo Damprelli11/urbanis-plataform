@@ -11,12 +11,12 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  Cell
+  ResponsiveContainer
 } from "recharts";
 
 export function Compare() {
-  const { districts, selectedSegment } = useUrbanStore();
+  const { districts, activeProjectId, projects } = useUrbanStore();
+  const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
   
   const [distA, setDistA] = useState<string>(districts[0]?.nm_dist || "");
   const [distB, setDistB] = useState<string>(districts[1]?.nm_dist || "");
@@ -68,7 +68,7 @@ export function Compare() {
           </div>
           <h1 className="text-4xl font-heading text-foreground tracking-tight leading-none uppercase">Comparação Territorial</h1>
           <p className="text-muted-foreground mt-3 max-w-xl font-medium">
-            Auditoria de performance lado a lado para a estratégia <b className="text-foreground">{selectedSegment.toUpperCase()}</b>.
+            Auditoria de performance lado a lado para o segmento <b className="text-foreground uppercase">{activeProject?.segment}</b>.
           </p>
         </div>
         

@@ -111,3 +111,34 @@
   box-shadow: none !important;
   color: hsl(var(--card-foreground)) !important;
 }
+
+@media print {
+  aside {
+    display: none !important;
+  }
+  header {
+    display: none !important;
+  }
+  footer {
+    display: none !important;
+  }
+  .pl-64 {
+    padding-left: 0 !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+  .border, border-border {
+    border-color: #e2e8f0 !important;
+  }
+  .bg-card {
+    background-color: white !important;
+    color: black !important;
+  }
+}
