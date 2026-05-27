@@ -1,14 +1,23 @@
 import React, { useState } from "react";
 import { Sidebar } from "./Sidebar";
-import { Bell, Search, User, Globe, ChevronDown } from "lucide-react";
+import { Bell, Search, Globe, ChevronDown, LogOut } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useUrbanStore } from "@/store/useUrbanStore";
 import { ProjectModal } from "../dashboard/ProjectModal";
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { projects, activeProjectId, selectProject } = useUrbanStore();
+  const { 
+    projects, 
+    activeProjectId, 
+    selectProject,
+    user,
+    offlineMode,
+    signOut,
+    setOfflineMode
+  } = useUrbanStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [editProjectId, setEditProjectId] = useState<string | null>(null);
 
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
@@ -99,8 +108,57 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Bell className="w-4 h-4" />
               <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-primary rounded-full"></span>
             </button>
-            <div className="h-8 w-8 ml-2 rounded bg-primary border border-primary/20 flex items-center justify-center cursor-pointer transition-fast hover:brightness-110">
-              <User className="w-4 h-4 text-white" />
+            {/* User Profile Dropdown (UX Upgrade) */}
+            <div className="relative ml-2">
+              <button 
+                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                className="h-8 w-8 rounded bg-primary/10 border border-primary/20 hover:bg-primary/20 flex items-center justify-center cursor-pointer transition-fast relative active:scale-95"
+                title="Perfil do Consultor"
+              >
+                <span className="text-xs font-bold text-primary uppercase font-mono">
+                  {offlineMode ? 'C' : user?.email?.charAt(0) || 'U'}
+                </span>
+              </button>
+
+              {isProfileDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setIsProfileDropdownOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-xl py-3.5 z-20 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="px-4 pb-3 mb-2 border-b border-border flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-bold text-primary font-mono uppercase">
+                          {offlineMode ? 'C' : user?.email?.charAt(0) || 'U'}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-foreground truncate">
+                          {offlineMode ? 'Convidado (Offline)' : 'Consultor Ativo'}
+                        </div>
+                        <div className="text-[10px] font-mono text-muted-foreground truncate" title={offlineMode ? 'Modo Local' : user?.email}>
+                          {offlineMode ? 'Local Storage' : user?.email}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="px-1.5 space-y-0.5">
+                      <button 
+                        onClick={() => {
+                          setIsProfileDropdownOpen(false);
+                          if (offlineMode) {
+                            setOfflineMode(false);
+                          } else {
+                            signOut();
+                          }
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2 rounded text-left text-xs font-medium text-slate-300 hover:text-red-400 hover:bg-red-500/10 transition-fast"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>{offlineMode ? "Conectar à Nuvem" : "Sair do Sistema"}</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </header>

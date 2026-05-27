@@ -14,7 +14,6 @@ export function Sidebar({ onNewProject, onEditProject }: SidebarProps) {
     activeProjectId, 
     selectProject, 
     deleteProject,
-    user,
     offlineMode,
     signOut,
     setOfflineMode
@@ -159,30 +158,15 @@ export function Sidebar({ onNewProject, onEditProject }: SidebarProps) {
         </div>
       )}
 
-      {/* Session Profile Footer (Cibersegurança & UX) */}
-      <div className="p-6 border-t border-white/5 bg-[#121316] flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-bold text-primary font-mono capitalize">
-              {offlineMode ? 'C' : user?.email?.charAt(0) || 'U'}
-            </span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-bold text-white truncate">
-              {offlineMode ? 'Convidado (Offline)' : 'Consultor Ativo'}
-            </div>
-            <div className="text-[9px] font-mono text-slate-500 truncate" title={offlineMode ? 'Sem sincronização em nuvem' : user?.email}>
-              {offlineMode ? 'Local Storage' : user?.email}
-            </div>
-          </div>
-        </div>
-        
+      {/* Sidebar Simple Logout (Clean UX) */}
+      <div className="p-4 border-t border-white/5 bg-[#121316]/50">
         <button 
           onClick={offlineMode ? () => setOfflineMode(false) : signOut}
-          className="p-2 hover:bg-white/5 text-slate-400 hover:text-primary rounded-lg transition-fast active:scale-95 flex-shrink-0"
+          className="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-lg border border-transparent hover:border-white/5 hover:bg-white/5 text-slate-400 hover:text-primary transition-fast active:scale-95 text-xs font-semibold"
           title={offlineMode ? "Conectar ao Banco de Dados Nuvem" : "Encerrar Sessão Segura (Logout)"}
         >
           <LogOut className="w-4 h-4" />
+          <span>{offlineMode ? "Conectar à Nuvem" : "Sair do Sistema"}</span>
         </button>
       </div>
     </aside>
