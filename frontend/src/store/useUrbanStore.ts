@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { DistrictData } from '../types';
 import rawData from '../data/urbanis_data.json';
+import { supabase, isSupabaseConfigured } from '../config/supabaseClient';
+import type { Session, User } from '@supabase/supabase-js';
 
 // Import raw Segment Profiles JSON (Standard MCDA / WLC configs)
 import restaurantPremium from '../config/profiles/restaurant-premium.json';
@@ -56,17 +58,30 @@ interface UrbanStore {
   theme: 'dark' | 'light';
   activeMapLayer: 'score' | 'crime' | 'age' | 'mobility';
   
-  createProject: (project: Omit<Project, 'id'>) => void;
-  updateProject: (id: string, project: Omit<Project, 'id'>) => void;
+  // Authentication & Supabase States
+  user: User | null;
+  session: Session | null;
+  authLoading: boolean;
+  offlineMode: boolean;
+
+  initAuth: () => Promise<void>;
+  login: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  setOfflineMode: (enabled: boolean) => void;
+  fetchSupabaseProjects: (userId: string) => Promise<void>;
+  
+  createProject: (project: Omit<Project, 'id'>) => Promise<void>;
+  updateProject: (id: string, project: Omit<Project, 'id'>) => Promise<void>;
   selectProject: (id: string) => void;
-  deleteProject: (id: string) => void;
+  deleteProject: (id: string) => Promise<void>;
   setActiveMapLayer: (layer: 'score' | 'crime' | 'age' | 'mobility') => void;
   calculateScores: () => void;
   toggleTheme: () => void;
   initTheme: () => void;
 }
 
-// Load saved data or fallback to defaults
+// Load saved data or fallback to defaults (Offline Mode)
 const loadSavedProjects = (): Project[] => {
   const saved = localStorage.getItem('urbanis-projects');
   if (saved) {
@@ -92,37 +107,277 @@ const loadSavedActiveProjectId = (projects: Project[]): string => {
   if (savedActive && projects.some(p => p.id === savedActive)) {
     return savedActive;
   }
-  return projects[0].id;
+  return projects.length > 0 ? projects[0].id : "";
 };
 
 export const useUrbanStore = create<UrbanStore>((set, get) => ({
-  projects: loadSavedProjects(),
-  activeProjectId: "", // will be initialized below
+  projects: [], // starts empty, loaded during initAuth
+  activeProjectId: "",
   districts: [],
   theme: (localStorage.getItem('urbanis-theme') as 'dark' | 'light') || 'dark',
   activeMapLayer: 'score',
 
-  createProject: (projData) => {
-    const newProject: Project = {
-      ...projData,
-      id: "proj-" + Date.now()
-    };
-    const updatedProjects = [...get().projects, newProject];
-    localStorage.setItem('urbanis-projects', JSON.stringify(updatedProjects));
-    localStorage.setItem('urbanis-active-project-id', newProject.id);
-    
-    set({ 
-      projects: updatedProjects,
-      activeProjectId: newProject.id 
-    });
+  // Authentication & Supabase state initializations
+  user: null,
+  session: null,
+  authLoading: true,
+  offlineMode: true,
+
+  initAuth: async () => {
+    if (!isSupabaseConfigured) {
+      set({ 
+        offlineMode: true, 
+        authLoading: false,
+        projects: loadSavedProjects() 
+      });
+      set({ activeProjectId: loadSavedActiveProjectId(get().projects) });
+      get().calculateScores();
+      return;
+    }
+
+    try {
+      // 1. Recover existing active session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // 2. Set up reactive auth state change listener
+      supabase.auth.onAuthStateChange(async (_event, newSession) => {
+        set({ 
+          session: newSession,
+          user: newSession?.user ?? null,
+          offlineMode: !newSession,
+          authLoading: false
+        });
+
+        if (newSession) {
+          await get().fetchSupabaseProjects(newSession.user.id);
+        } else {
+          // Revert to localStorage if logged out
+          const localProjs = loadSavedProjects();
+          set({ 
+            projects: localProjs,
+            activeProjectId: loadSavedActiveProjectId(localProjs)
+          });
+          get().calculateScores();
+        }
+      });
+
+      if (session) {
+        set({ 
+          session, 
+          user: session.user, 
+          offlineMode: false,
+          authLoading: false 
+        });
+        await get().fetchSupabaseProjects(session.user.id);
+      } else {
+        const localProjs = loadSavedProjects();
+        set({ 
+          offlineMode: true, 
+          authLoading: false,
+          projects: localProjs,
+          activeProjectId: loadSavedActiveProjectId(localProjs)
+        });
+        get().calculateScores();
+      }
+    } catch (e) {
+      console.error("Erro na inicialização do Supabase Auth:", e);
+      const localProjs = loadSavedProjects();
+      set({ 
+        offlineMode: true, 
+        authLoading: false,
+        projects: localProjs,
+        activeProjectId: loadSavedActiveProjectId(localProjs)
+      });
+      get().calculateScores();
+    }
+  },
+
+  login: async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error && data.session && data.user) {
+      set({ session: data.session, user: data.user, offlineMode: false });
+      await get().fetchSupabaseProjects(data.user.id);
+    }
+    return { error };
+  },
+
+  signUp: async (email, password) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (!error && data.session && data.user) {
+      set({ session: data.session, user: data.user, offlineMode: false });
+      await get().fetchSupabaseProjects(data.user.id);
+    }
+    return { error };
+  },
+
+  signOut: async () => {
+    await supabase.auth.signOut();
+    set({ session: null, user: null, offlineMode: true });
+    // Callback triggers state change, resetting to localStorage projects
+  },
+
+  setOfflineMode: (enabled) => {
+    set({ offlineMode: enabled });
+    if (enabled) {
+      const localProjs = loadSavedProjects();
+      set({ 
+        projects: localProjs,
+        activeProjectId: loadSavedActiveProjectId(localProjs)
+      });
+      get().calculateScores();
+    }
+  },
+
+  fetchSupabaseProjects: async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const mapped: Project[] = data.map(row => ({
+          id: row.id,
+          name: row.name,
+          segment: row.segment,
+          profile: row.profile,
+          strategicGoal: row.strategic_goal
+        }));
+        set({ 
+          projects: mapped,
+          activeProjectId: loadSavedActiveProjectId(mapped)
+        });
+      } else {
+        // Automatically provision a default study for new accounts to keep dashboard filled
+        const defaultProj = DEFAULT_PROJECTS[0];
+        const { data: inserted, error: insertError } = await supabase
+          .from('projects')
+          .insert({
+            user_id: userId,
+            name: defaultProj.name,
+            segment: defaultProj.segment,
+            profile: defaultProj.profile,
+            strategic_goal: defaultProj.strategicGoal
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        if (inserted) {
+          const mappedProj: Project = {
+            id: inserted.id,
+            name: inserted.name,
+            segment: inserted.segment,
+            profile: inserted.profile,
+            strategicGoal: inserted.strategic_goal
+          };
+          set({ 
+            projects: [mappedProj],
+            activeProjectId: mappedProj.id 
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao buscar projetos do Supabase:", e);
+      // Fallback local caso dê erro de conexão
+      const localProjs = loadSavedProjects();
+      set({ 
+        projects: localProjs,
+        activeProjectId: loadSavedActiveProjectId(localProjs)
+      });
+    } finally {
+      get().calculateScores();
+    }
+  },
+
+  createProject: async (projData) => {
+    const { user, offlineMode } = get();
+
+    if (isSupabaseConfigured && !offlineMode && user) {
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .insert({
+            user_id: user.id,
+            name: projData.name,
+            segment: projData.segment,
+            profile: projData.profile,
+            strategic_goal: projData.strategicGoal
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          const newProject: Project = {
+            id: data.id,
+            name: data.name,
+            segment: data.segment,
+            profile: data.profile,
+            strategicGoal: data.strategic_goal
+          };
+          set({ 
+            projects: [...get().projects, newProject],
+            activeProjectId: newProject.id 
+          });
+        }
+      } catch (e) {
+        console.error("Erro ao criar projeto no Supabase:", e);
+      }
+    } else {
+      // LocalStorage Offline Fallback
+      const newProject: Project = {
+        ...projData,
+        id: "proj-" + Date.now()
+      };
+      const updatedProjects = [...get().projects, newProject];
+      localStorage.setItem('urbanis-projects', JSON.stringify(updatedProjects));
+      localStorage.setItem('urbanis-active-project-id', newProject.id);
+      
+      set({ 
+        projects: updatedProjects,
+        activeProjectId: newProject.id 
+      });
+    }
     
     get().calculateScores();
   },
 
-  updateProject: (id, projData) => {
-    const updatedProjects = get().projects.map(p => p.id === id ? { ...p, ...projData } : p);
-    localStorage.setItem('urbanis-projects', JSON.stringify(updatedProjects));
-    set({ projects: updatedProjects });
+  updateProject: async (id, projData) => {
+    const { user, offlineMode } = get();
+
+    if (isSupabaseConfigured && !offlineMode && user) {
+      try {
+        const { error } = await supabase
+          .from('projects')
+          .update({
+            name: projData.name,
+            segment: projData.segment,
+            profile: projData.profile,
+            strategic_goal: projData.strategicGoal
+          })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        const updatedProjects = get().projects.map(p => 
+          p.id === id ? { ...p, ...projData } : p
+        );
+        set({ projects: updatedProjects });
+      } catch (e) {
+        console.error("Erro ao atualizar projeto no Supabase:", e);
+      }
+    } else {
+      // LocalStorage Offline Fallback
+      const updatedProjects = get().projects.map(p => p.id === id ? { ...p, ...projData } : p);
+      localStorage.setItem('urbanis-projects', JSON.stringify(updatedProjects));
+      set({ projects: updatedProjects });
+    }
+    
     get().calculateScores();
   },
 
@@ -133,7 +388,8 @@ export const useUrbanStore = create<UrbanStore>((set, get) => ({
     get().calculateScores();
   },
 
-  deleteProject: (id) => {
+  deleteProject: async (id) => {
+    const { user, offlineMode } = get();
     if (get().projects.length <= 1) return;
     
     const updatedProjects = get().projects.filter(p => p.id !== id);
@@ -143,13 +399,32 @@ export const useUrbanStore = create<UrbanStore>((set, get) => ({
       nextActiveId = updatedProjects[0].id;
     }
     
-    localStorage.setItem('urbanis-projects', JSON.stringify(updatedProjects));
-    localStorage.setItem('urbanis-active-project-id', nextActiveId);
-    
-    set({
-      projects: updatedProjects,
-      activeProjectId: nextActiveId
-    });
+    if (isSupabaseConfigured && !offlineMode && user) {
+      try {
+        const { error } = await supabase
+          .from('projects')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        set({
+          projects: updatedProjects,
+          activeProjectId: nextActiveId
+        });
+      } catch (e) {
+        console.error("Erro ao deletar projeto no Supabase:", e);
+      }
+    } else {
+      // LocalStorage Offline Fallback
+      localStorage.setItem('urbanis-projects', JSON.stringify(updatedProjects));
+      localStorage.setItem('urbanis-active-project-id', nextActiveId);
+      
+      set({
+        projects: updatedProjects,
+        activeProjectId: nextActiveId
+      });
+    }
     
     get().calculateScores();
   },
@@ -217,9 +492,7 @@ export const useUrbanStore = create<UrbanStore>((set, get) => ({
   },
 }));
 
-// Initialize active projectId and scores
-const initialProjects = useUrbanStore.getState().projects;
-const initialActiveId = loadSavedActiveProjectId(initialProjects);
-useUrbanStore.setState({ activeProjectId: initialActiveId });
-useUrbanStore.getState().calculateScores();
+// Initialize active projectId and scores (Triggers initAuth asynchronously)
+useUrbanStore.getState().initAuth();
 useUrbanStore.getState().initTheme();
+
