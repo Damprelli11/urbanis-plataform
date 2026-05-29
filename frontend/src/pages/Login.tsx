@@ -61,7 +61,7 @@ export function Login() {
           <p className="text-xs text-muted-foreground mt-1 text-center max-w-[280px]">
             {isSignUp 
               ? "Cadastre suas credenciais para gerenciar seus estudos na nuvem" 
-              : "Faça login com sua conta segura para acessar seu painel de geomarketing"}
+              : "Faça login com sua conta segura para acessar seu painel de inteligência territorial"}
           </p>
         </header>
 
