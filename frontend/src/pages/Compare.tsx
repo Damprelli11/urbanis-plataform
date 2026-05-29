@@ -170,6 +170,68 @@ export function Compare() {
     }
   ];
 
+  const downloadAuditData = () => {
+    const exportData = {
+      projeto: {
+        nome: activeProject?.name || "Estudo de Viabilidade",
+        segmento: activeProject?.segment || "Geral",
+        objetivo_estrategico: activeProject?.strategicGoal || ""
+      },
+      data_auditoria: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR'),
+      comparacao: {
+        distrito_principal: {
+          nome: dataA.nm_dist,
+          score_geral_urbanis: dataA.UrbanScore,
+          eixos: {
+            capacidade_infraestrutura: Number(((dataA.InfraScore || 0) * 100).toFixed(1)),
+            densidade_mercado: Number(((dataA.MarketScore || 0) * 100).toFixed(1)),
+            mitigacao_risco: Number(((1 - (dataA.RiskScore || 0)) * 100).toFixed(1))
+          },
+          indicadores: {
+            populacao_total: dataA.populacao,
+            densidade_demografica_hab_km2: dataA.dens_demog,
+            idade_media_anos: dataA.id_media,
+            estacoes_metroferroviarias: dataA.n_stations,
+            fluxo_passageiros_dia: dataA.n_mob ? Math.round(Math.exp(dataA.n_mob) - 1) * 1000 : 0,
+            ocorrencias_criminais_anuais: dataA.n_crime,
+            indice_vulnerabilidade_social: dataA.socio_vulnerability_score
+          }
+        },
+        distrito_secundario: {
+          nome: dataB.nm_dist,
+          score_geral_urbanis: dataB.UrbanScore,
+          eixos: {
+            capacidade_infraestrutura: Number(((dataB.InfraScore || 0) * 100).toFixed(1)),
+            densidade_mercado: Number(((dataB.MarketScore || 0) * 100).toFixed(1)),
+            mitigacao_risco: Number(((1 - (dataB.RiskScore || 0)) * 100).toFixed(1))
+          },
+          indicadores: {
+            populacao_total: dataB.populacao,
+            densidade_demografica_hab_km2: dataB.dens_demog,
+            idade_media_anos: dataB.id_media,
+            estacoes_metroferroviarias: dataB.n_stations,
+            fluxo_passageiros_dia: dataB.n_mob ? Math.round(Math.exp(dataB.n_mob) - 1) * 1000 : 0,
+            ocorrencias_criminais_anuais: dataB.n_crime,
+            indice_vulnerabilidade_social: dataB.socio_vulnerability_score
+          }
+        }
+      }
+    };
+
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(exportData, null, 2)
+    )}`;
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", jsonString);
+    downloadAnchor.setAttribute(
+      "download",
+      `auditoria_${dataA.nm_dist.toLowerCase()}_vs_${dataB.nm_dist.toLowerCase()}.json`
+    );
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -186,8 +248,11 @@ export function Compare() {
         </div>
         
         <div className="flex gap-3">
-          <button className="h-10 px-4 border border-border text-muted-foreground text-xs font-bold uppercase tracking-widest rounded-md hover:bg-muted/30 transition-fast flex items-center gap-2">
-            <Download className="w-3.5 h-3.5" />
+          <button 
+            onClick={downloadAuditData}
+            className="h-10 px-4 border border-border text-muted-foreground hover:text-foreground hover:border-primary/80 text-xs font-bold uppercase tracking-widest rounded-md hover:bg-primary/5 transition-fast flex items-center gap-2"
+          >
+            <Download className="w-3.5 h-3.5 text-primary" />
             Dados da Auditoria
           </button>
         </div>
