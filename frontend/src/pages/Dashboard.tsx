@@ -341,7 +341,15 @@ export function Dashboard() {
               <b>Perfil Demográfico do Negócio</b>: A idade média local ({topDistrict.id_media?.toFixed(1)} anos) sugere que as estratégias de comunicação visual, canais de marketing e mix de produtos/serviços devem ser desenhadas para atender ao perfil de público <b>{topDistrict.id_media >= 42 ? "Adulto-Sênior, valorizando acessibilidade física, atendimento de alta qualidade e conveniência" : "Jovem-Adulto, com forte apelo em canais digitais, agilidade no atendimento e flexibilidade operacional"}</b>.
             </li>
             <li>
-              <b>Decisão de Implantação</b>: O distrito de <b>{topDistrict.nm_dist}</b> qualifica-se como **RECOMENDADO** para prosseguimento dos estudos de viabilidade financeira e negociação de imóveis comerciais locais, dada a aderência global de <b>{topDistrict.UrbanScore?.toFixed(1)}%</b> em nossa análise determinística.
+              <b>Decisão de Implantação</b>: O distrito de <b>{topDistrict.nm_dist}</b> qualifica-se como {
+                topDistrict.UrbanScore! >= 70 ? (
+                  <strong className="text-emerald-600 uppercase font-black">Recomendado (Sinal Verde)</strong>
+                ) : topDistrict.UrbanScore! >= 45 ? (
+                  <strong className="text-amber-500 uppercase font-black">Recomendado com Ressalvas (Sinal Amarelo)</strong>
+                ) : (
+                  <strong className="text-red-600 uppercase font-black">Não Recomendado (Sinal Vermelho)</strong>
+                )
+              } para prosseguimento dos estudos de viabilidade comercial e negociação de pontos físicos, dada a aderência de <b>{topDistrict.UrbanScore?.toFixed(1)}%</b> obtida em nossa análise determinística.
             </li>
           </ul>
         </div>
