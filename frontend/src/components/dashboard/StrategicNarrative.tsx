@@ -31,7 +31,11 @@ export function StrategicNarrative({ topDistrict, segment }: StrategicNarrativeP
   const cDesc = topDistrict.central_norm > 0.7 ? "Alta Centralidade Econômica" : topDistrict.central_norm > 0.3 ? "Centralidade em Consolidação" : "Baixa Influência Econômica";
   const mDesc = topDistrict.mob_norm > 0.6 ? "Elevado Fluxo Urbano" : "Fluxo Urbano Localizado";
   const rDesc = (topDistrict.RiskScore || 0) < 0.4 ? "Risco Operacional Controlado" : "⚠️ Alerta de Risco Estrutural";
-  const dDesc = topDistrict.dens_norm > 0.6 ? "Alta Densidade de Público" : "Baixa Densidade Populacional";
+  const dDesc = topDistrict.dens_norm > 0.6 
+    ? "Altíssima Densidade Residencial" 
+    : topDistrict.dens_norm > 0.3 
+      ? "Média Densidade Residencial" 
+      : "Baixa Densidade Residencial";
 
   return (
     <div 
