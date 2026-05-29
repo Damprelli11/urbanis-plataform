@@ -10,21 +10,31 @@ export function StrategicNarrative({ topDistrict, segment }: StrategicNarrativeP
   const score = topDistrict.UrbanScore || 0;
   
   let boxColor, statusLabel, Icon, boxBgClass;
-  // Thresholds aligned with app.py
-  if (score >= 75) {
-    boxColor = "text-[#22C55E]";
-    boxBgClass = "bg-[#22C55E]/5";
+  
+  if (score >= 70) {
+    boxColor = "text-[#16a34a]"; // Verde Escuro
+    boxBgClass = "bg-[#16a34a]/5";
+    statusLabel = "ADERÊNCIA EXCELENTE";
+    Icon = CheckCircle2;
+  } else if (score >= 55) {
+    boxColor = "text-[#22c55e]"; // Verde Claro
+    boxBgClass = "bg-[#22c55e]/5";
     statusLabel = "ALTA ADERÊNCIA";
     Icon = CheckCircle2;
-  } else if (score >= 50) {
-    boxColor = "text-[#EAB308]";
-    boxBgClass = "bg-[#EAB308]/5";
-    statusLabel = "ADERÊNCIA MODERADA";
+  } else if (score >= 40) {
+    boxColor = "text-[#a3e635]"; // Verde Limão
+    boxBgClass = "bg-[#a3e635]/5";
+    statusLabel = "ADERÊNCIA SATISFATÓRIA (BOM)";
+    Icon = CheckCircle2;
+  } else if (score >= 25) {
+    boxColor = "text-[#eab308]"; // Amarelo
+    boxBgClass = "bg-[#eab308]/5";
+    statusLabel = "ADERÊNCIA REGULAR / MODERADA";
     Icon = AlertTriangle;
   } else {
-    boxColor = "text-[#EF4444]";
-    boxBgClass = "bg-[#EF4444]/5";
-    statusLabel = "BAIXA ADERÊNCIA";
+    boxColor = "text-[#ef4444]"; // Vermelho
+    boxBgClass = "bg-[#ef4444]/5";
+    statusLabel = "BAIXA ADERÊNCIA / ALTO RISCO";
     Icon = XCircle;
   }
 
