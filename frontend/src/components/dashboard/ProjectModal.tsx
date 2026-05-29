@@ -44,11 +44,11 @@ const SEGMENTS = {
 };
 
 const PREDEFINED_GOALS = [
-  "Expansão de Capilaridade e Cobertura Territorial",
-  "Implantação de Loja Conceito (Flagship Store)",
-  "Proximidade e Conveniência Residencial",
-  "Otimização de Hub Logístico (Distribuição)",
-  "Consolidação de Market Share em Nós Comerciais"
+  "Abrir novas filiais pela cidade (Expansão)",
+  "Instalar uma loja de destaque em ponto nobre",
+  "Focar em bairros residenciais (Conveniência)",
+  "Distribuir mercadorias mais rápido (Logística)",
+  "Atrair maior fluxo de clientes (Centro Comercial)"
 ];
 
 export function ProjectModal({ isOpen, onClose, editProjectId }: ProjectModalProps) {

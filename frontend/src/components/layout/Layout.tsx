@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { Sidebar } from "./Sidebar";
-import { Bell, Search, Globe, ChevronDown, LogOut } from "lucide-react";
+import { Globe, ChevronDown, LogOut } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useUrbanStore } from "@/store/useUrbanStore";
 import { ProjectModal } from "../dashboard/ProjectModal";
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { 
-    projects, 
-    activeProjectId, 
+  const {
+    projects,
+    activeProjectId,
     selectProject,
     user,
     offlineMode,
@@ -24,7 +24,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased text-foreground selection:bg-primary/30 selection:text-white">
-      <Sidebar 
+      <Sidebar
         onNewProject={() => {
           setEditProjectId(null);
           setIsModalOpen(true);
@@ -34,13 +34,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           setIsModalOpen(true);
         }}
       />
-      
-      <ProjectModal 
-        isOpen={isModalOpen} 
+
+      <ProjectModal
+        isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
           setEditProjectId(null);
-        }} 
+        }}
         editProjectId={editProjectId}
       />
 
@@ -53,11 +53,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <span>SÃO PAULO / SP</span>
               </div>
               <span className="opacity-10 text-lg font-light">|</span>
-              
+
               {/* Project Selector Dropdown (Simplified UX Selector) */}
               {activeProject && (
                 <div className="relative">
-                  <button 
+                  <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="flex items-center gap-2 text-foreground font-sans font-bold capitalize hover:text-primary transition-fast tracking-normal text-xs bg-muted/30 px-3 py-1.5 rounded border border-border/60"
                   >
@@ -74,17 +74,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         </div>
                         <div className="max-h-60 overflow-y-auto space-y-0.5 p-1.5">
                           {projects.map((p) => (
-                            <div 
+                            <div
                               key={p.id}
                               onClick={() => {
                                 selectProject(p.id);
                                 setIsDropdownOpen(false);
                               }}
-                              className={`p-2 rounded cursor-pointer transition-fast ${
-                                p.id === activeProjectId 
-                                  ? 'bg-primary/10 text-primary font-bold' 
-                                  : 'hover:bg-muted text-foreground'
-                              }`}
+                              className={`p-2 rounded cursor-pointer transition-fast ${p.id === activeProjectId
+                                ? 'bg-primary/10 text-primary font-bold'
+                                : 'hover:bg-muted text-foreground'
+                                }`}
                             >
                               <div className="text-xs truncate capitalize font-sans">{p.name}</div>
                               <div className="text-[9px] font-mono opacity-60 uppercase">{p.segment}</div>
@@ -101,16 +100,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button className="h-9 w-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-fast border border-transparent hover:border-border rounded-md">
-              <Search className="w-4 h-4" />
-            </button>
-            <button className="h-9 w-9 flex items-center justify-center text-muted-foreground hover:text-foreground transition-fast border border-transparent hover:border-border rounded-md relative">
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-primary rounded-full"></span>
-            </button>
             {/* User Profile Dropdown (UX Upgrade) */}
             <div className="relative ml-2">
-              <button 
+              <button
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                 className="h-8 w-8 rounded bg-primary/10 border border-primary/20 hover:bg-primary/20 flex items-center justify-center cursor-pointer transition-fast relative active:scale-95"
                 title="Perfil do Consultor"
@@ -139,9 +131,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="px-1.5 space-y-0.5">
-                      <button 
+                      <button
                         onClick={() => {
                           setIsProfileDropdownOpen(false);
                           if (offlineMode) {
@@ -168,7 +160,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </main>
 
         <footer className="h-12 border-t border-border bg-[#101113] flex items-center justify-between px-10">
-          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">© 2026 PLATAFORMA URBANIS</span>
+          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">© 2026 URBANIS</span>
           <div className="flex gap-6 text-[9px] font-mono text-muted-foreground uppercase tracking-widest">
             <a href="#" className="hover:text-primary transition-fast">Status do Sistema: Estável</a>
             <a href="#" className="hover:text-primary transition-fast">v2.4.1</a>

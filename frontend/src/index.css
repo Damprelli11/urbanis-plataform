@@ -97,7 +97,9 @@
 
 /* Leaflet Overrides */
 .leaflet-container {
-  background: hsl(var(--background)) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  border: none !important;
 }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
   background: hsl(var(--card)) !important;

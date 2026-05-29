@@ -145,6 +145,7 @@ export function Dashboard() {
                     if (activeMapLayer === 'mobility') return (b.n_mob || 0) - (a.n_mob || 0);
                     if (activeMapLayer === 'crime') return (b.n_crime || 0) - (a.n_crime || 0);
                     if (activeMapLayer === 'age') return (b.id_media || 0) - (a.id_media || 0);
+                    return (b.UrbanScore || 0) - (a.UrbanScore || 0);
                   }).slice(0, 10).map((d) => {
                     const isSelected = selectedDistrictName && d.nm_dist.toUpperCase() === selectedDistrictName.toUpperCase();
                     return (
@@ -343,11 +344,15 @@ export function Dashboard() {
             <li>
               <b>Decisão de Implantação</b>: O distrito de <b>{topDistrict.nm_dist}</b> qualifica-se como {
                 topDistrict.UrbanScore! >= 70 ? (
-                  <strong className="text-emerald-600 uppercase font-black">Recomendado (Sinal Verde)</strong>
-                ) : topDistrict.UrbanScore! >= 45 ? (
-                  <strong className="text-amber-500 uppercase font-black">Recomendado com Ressalvas (Sinal Amarelo)</strong>
+                  <strong className="text-emerald-600 uppercase font-black">Altamente Recomendado (Aderência Excelente)</strong>
+                ) : topDistrict.UrbanScore! >= 55 ? (
+                  <strong className="text-emerald-500 uppercase font-black">Recomendado (Alta Aderência)</strong>
+                ) : topDistrict.UrbanScore! >= 40 ? (
+                  <strong className="text-lime-600 uppercase font-black">Recomendado (Aderência Satisfatória)</strong>
+                ) : topDistrict.UrbanScore! >= 25 ? (
+                  <strong className="text-amber-500 uppercase font-black">Recomendado com Restrições (Aderência Moderada)</strong>
                 ) : (
-                  <strong className="text-red-600 uppercase font-black">Não Recomendado (Sinal Vermelho)</strong>
+                  <strong className="text-red-600 uppercase font-black">Não Recomendado (Baixa Aderência)</strong>
                 )
               } para prosseguimento dos estudos de viabilidade comercial e negociação de pontos físicos, dada a aderência de <b>{topDistrict.UrbanScore?.toFixed(1)}%</b> obtida em nossa análise determinística.
             </li>
