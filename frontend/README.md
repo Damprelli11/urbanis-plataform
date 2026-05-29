@@ -1,6 +1,6 @@
-# 📊 Urbanis — Inteligência Territorial & Geomarketing
+# 📊 Urbanis — Inteligência Territorial & Apoio à Decisão
 
-O **Urbanis** é uma plataforma web de alta performance voltada para inteligência territorial e geomarketing, projetada para a análise comparativa e estratégica de distritos na cidade de São Paulo.
+O **Urbanis** é uma plataforma web de alta performance voltada para inteligência territorial e apoio à decisão geoespacial, projetada para a análise comparativa e estratégica de distritos na cidade de São Paulo.
 
 A aplicação cruza dados públicos consolidados para calcular índices de aderência de negócios de forma totalmente determinística, permitindo que analistas e empreendedores identifiquem os melhores polos para expansão ou instalação de operações.
 

@@ -8,7 +8,7 @@ import { MapPin, Users, Activity, Target, ArrowUpRight, Printer, Info } from "lu
 import { getUrbanScoreColor } from "@/lib/colors";
 
 export function Dashboard() {
-  const { districts, activeProjectId, projects, activeMapLayer } = useUrbanStore();
+  const { districts, activeProjectId, projects, activeMapLayer, selectedDistrictName, setSelectedDistrictName } = useUrbanStore();
 
   if (!districts || districts.length === 0) {
     return (
@@ -23,8 +23,10 @@ export function Dashboard() {
 
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
 
-
-  const topDistrict = districts[0];
+  const defaultTopDistrict = districts[0];
+  const topDistrict = selectedDistrictName
+    ? districts.find(d => d.nm_dist.toUpperCase() === selectedDistrictName.toUpperCase()) || defaultTopDistrict
+    : defaultTopDistrict;
   const totalPop = districts.reduce((acc, d) => acc + (d.populacao || 0), 0);
   const avgDens = districts.reduce((acc, d) => acc + (d.dens_demog || 0), 0) / districts.length;
 
@@ -33,7 +35,9 @@ export function Dashboard() {
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-500 print:space-y-6">
+    <>
+      {/* 💻 CONTEÚDO DO DASHBOARD (Escondido na Impressão) */}
+      <div className="space-y-10 animate-in fade-in duration-500 print:hidden">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 print:border-b print:pb-4">
         <div className="space-y-2">
@@ -77,12 +81,14 @@ export function Dashboard() {
           value={districts.length.toString()}
           icon={MapPin}
           trend="+0.0%"
+          trendLabel="Limite Geográfico"
         />
         <StatCard
           title="População Total"
           value={totalPop.toLocaleString('pt-BR')}
           icon={Users}
           trend="+2.1%"
+          trendLabel="Cresc. Demográfico"
         />
         <StatCard
           title="Densidade Média"
@@ -90,13 +96,15 @@ export function Dashboard() {
           unit="hab/km²"
           icon={Activity}
           trend="-0.4%"
+          trendLabel="Adensamento Urbano"
         />
         <StatCard
-          title="Top Aderência"
+          title={selectedDistrictName ? `Aderência: ${topDistrict.nm_dist}` : "Top Aderência"}
           value={topDistrict.UrbanScore?.toFixed(1) || "0"}
           unit="%"
           icon={Target}
           trend="+1.2%"
+          trendLabel={selectedDistrictName ? "Foco Selecionado" : "Evolução Comercial"}
           primary
         />
       </div>
@@ -104,11 +112,11 @@ export function Dashboard() {
       {/* Map & Top 10 Table */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 print:grid-cols-1 print:gap-4">
         <div className="lg:col-span-3 print:hidden">
-          <Card className="h-full">
+          <Card className="h-full flex flex-col">
             <CardHeader className="border-b border-border bg-muted/20 py-4">
               <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Distribuição Territorial de Aderência</CardTitle>
             </CardHeader>
-            <CardContent className="p-0 h-[600px]">
+            <CardContent className="p-0 flex-1 min-h-[500px]">
               <ChoroplethMap />
             </CardContent>
           </Card>
@@ -119,7 +127,7 @@ export function Dashboard() {
             <CardHeader className="border-b border-border bg-muted/20 py-4">
               <CardTitle className="text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">Top 10 Polos de Aderência</CardTitle>
             </CardHeader>
-            <div className="flex-1 overflow-auto">
+            <CardContent className="p-0 flex-1 overflow-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
@@ -137,15 +145,19 @@ export function Dashboard() {
                     if (activeMapLayer === 'mobility') return (b.n_mob || 0) - (a.n_mob || 0);
                     if (activeMapLayer === 'crime') return (b.n_crime || 0) - (a.n_crime || 0);
                     if (activeMapLayer === 'age') return (b.id_media || 0) - (a.id_media || 0);
-                    return (b.UrbanScore || 0) - (a.UrbanScore || 0);
-                  }).slice(0, 10).map((d) => (
-                    <tr key={d.nm_dist} className="hover:bg-muted/30 transition-fast group">
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
+                  }).slice(0, 10).map((d) => {
+                    const isSelected = selectedDistrictName && d.nm_dist.toUpperCase() === selectedDistrictName.toUpperCase();
+                    return (
+                      <tr 
+                        key={d.nm_dist} 
+                        onClick={() => setSelectedDistrictName(d.nm_dist)}
+                        className={`hover:bg-muted/30 transition-fast group cursor-pointer border-b border-border/40 ${
+                          isSelected ? 'bg-primary/5 border-l-2 border-primary' : ''
+                        }`}
+                      >
+                        <td className="px-6 py-4">
                           <span className="text-sm font-bold text-foreground group-hover:text-primary transition-fast">{d.nm_dist}</span>
-                          <span className="text-[10px] text-muted-foreground font-mono uppercase">Zona {d.nm_dist.substring(0, 2)}</span>
-                        </div>
-                      </td>
+                        </td>
                       <td className="px-6 py-4">
                         <span className="font-mono text-sm font-bold text-foreground">
                           {activeMapLayer === 'mobility'
@@ -197,10 +209,11 @@ export function Dashboard() {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
-            </div>
+            </CardContent>
           </Card>
         </div>
       </div>
@@ -234,20 +247,134 @@ export function Dashboard() {
         </Card>
       </div>
     </div>
+
+    {/* 🖨️ SEÇÃO EXCLUSIVA PARA IMPRESSÃO (PDF) */}
+      <div className="hidden print:block font-sans text-black bg-white p-8 max-w-4xl mx-auto space-y-8 leading-relaxed text-sm">
+        
+        {/* Capa / Cabeçalho do Relatório */}
+        <div className="border-b-4 border-[#dc2626] pb-6 text-center space-y-2">
+          <div className="text-[10px] font-mono tracking-[0.3em] text-muted-foreground uppercase">Plataforma de Inteligência Territorial & Apoio à Decisão</div>
+          <h1 className="text-4xl font-heading text-black font-black uppercase tracking-tight">Relatório de Viabilidade Comercial</h1>
+          <p className="text-xs font-mono text-muted-foreground uppercase">
+            Estudo: <span className="font-bold text-black">{activeProject?.name || "Estudo de Aderência"}</span> | 
+            Segmento: <span className="font-bold text-black">{activeProject?.segment || "Geral"}</span>
+          </p>
+          <div className="text-[10px] text-muted-foreground font-mono">
+            Gerado em {new Date().toLocaleDateString('pt-BR')} | São Paulo - SP
+          </div>
+        </div>
+
+        {/* Resumo Executivo */}
+        <div className="bg-muted/10 p-6 rounded-lg border border-border/80 space-y-3">
+          <h2 className="text-base font-bold uppercase tracking-wider text-black font-heading">1. Resumo Executivo</h2>
+          <p className="text-xs">
+            Este relatório apresenta a análise de viabilidade e aderência territorial para o projeto <b>{activeProject?.name || "Estudo"}</b>, cujo objetivo estratégico é: <i>"{activeProject?.strategicGoal || "Identificar o melhor polo comercial"}"</i>.
+          </p>
+          <p className="text-xs">
+            Utilizando a metodologia de decisão de inteligência territorial, o sistema cruzou bases públicas históricas consolidadas (Censo IBGE, Fundação SEADE, Secretaria de Segurança Pública - SSP, IPVS e dados de estações metroferroviárias) para mapear a atratividade comercial dos distritos do município de São Paulo.
+          </p>
+        </div>
+
+        {/* Diagnóstico do Distrito Selecionado/Líder */}
+        <div className="space-y-4">
+          <h2 className="text-base font-bold uppercase tracking-wider text-black font-heading border-b border-border pb-2">
+            2. Análise do Polo Recomendado: {topDistrict.nm_dist}
+          </h2>
+          <p className="text-xs">
+            O distrito de <b>{topDistrict.nm_dist}</b> foi classificado no topo do ranking analítico de tomada de decisão, obtendo o maior <b>UrbanScore</b> consolidado de <b>{topDistrict.UrbanScore?.toFixed(1)}%</b> de aderência operacional para o segmento <b>{activeProject?.segment}</b>. Abaixo, detalha-se o diagnóstico dos eixos de decisão:
+          </p>
+
+          <div className="grid grid-cols-1 gap-6 mt-4">
+            
+            {/* Eixo Demográfico */}
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-black">A. Eixo Demográfico e Densidade Populacional</h3>
+              <p className="text-xs">
+                O distrito possui uma população total de <b>{topDistrict.populacao?.toLocaleString('pt-BR')} habitantes</b>, com uma densidade demográfica expressiva de <b>{Math.round(topDistrict.dens_demog || 0).toLocaleString('pt-BR')} hab/km²</b> (índice normalizado de {Math.round(topDistrict.dens_norm * 100)}%). A idade média da população é de <b>{topDistrict.id_media?.toFixed(1)} anos</b>. 
+                Estes dados confirmam um mercado consumidor de alta densidade local, ideal para negócios com foco em ganho de escala e alto tráfego de clientes residenciais locais.
+              </p>
+            </div>
+
+            {/* Eixo de Acessibilidade e Mobilidade */}
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-black">B. Infraestrutura de Acessibilidade e Fluxo Urbano</h3>
+              <p className="text-xs">
+                O distrito conta com <b>{topDistrict.n_stations || 0} estação(ões) metroferroviária(s)</b> ativa(s) em seu território geográfico. 
+                {topDistrict.n_stations > 0 ? (
+                  <span> O fluxo diário nas plataformas de embarque e desembarque atinge cerca de <b>{Math.round(Math.exp(topDistrict.n_mob) - 1)} mil passageiros/dia</b>. Essa infraestrutura de alta capacidade garante excelente acessibilidade interdistrital, alta captação de clientes flutuantes (trabalhadores e estudantes em trânsito) e forte atratividade para operações de comércio de passagem rápida.</span>
+                ) : (
+                  <span> O distrito não possui conexões diretas de transporte sobre trilhos de alta capacidade. O tráfego local é majoritariamente residencial e dependente de linhas secundárias de ônibus ou deslocamento privado, o que o qualifica preferencialmente como um mercado de vizinhança residencial estrita, sem dependência de fluxo flutuante externo.</span>
+                )}
+              </p>
+            </div>
+
+            {/* Eixo de Segurança e Vulnerabilidade */}
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-black">C. Eixo de Segurança Pública e Vulnerabilidade Social</h3>
+              <p className="text-xs">
+                Em relação à segurança pública, o distrito registrou um volume de <b>{topDistrict.n_crime || 0} ocorrências</b> criminais anuais agregadas pela Secretaria de Segurança Pública. 
+                O Índice Paulista de Vulnerabilidade Social (IPVS) do distrito é de <b>{topDistrict.socio_vulnerability_score?.toFixed(2)}</b> (escala normalizada de {Math.round(topDistrict.vulner_norm * 100)}%, onde menor vulnerabilidade indica maior poder aquisitivo médio).
+                {topDistrict.n_crime > 500 ? (
+                  <span> <b className="text-[#dc2626]">Alerta de Risco Operacional:</b> O elevado número de ocorrências na região requer que o plano de implantação contemple investimentos adicionais em segurança física ativa, controle eletrônico de acessos e seguro patrimonial robusto para mitigar perdas operacionais locais.</span>
+                ) : (
+                  <span> A segurança do distrito está em níveis controlados e favoráveis para implantação de vitrines abertas e atendimento ao público estendido, reduzindo sensivelmente os custos preventivos de perdas patrimoniais.</span>
+                )}
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Parecer Estratégico do Analista */}
+        <div className="space-y-4 pt-4 border-t border-border">
+          <h2 className="text-base font-bold uppercase tracking-wider text-black font-heading">
+            3. Parecer Técnico & Recomendações
+          </h2>
+          <p className="text-xs">
+            Com base nas variáveis ambientais e territoriais processadas, emitimos as seguintes diretrizes para o projeto <b>{activeProject?.name}</b> em <b>{topDistrict.nm_dist}</b>:
+          </p>
+          <ul className="list-disc pl-5 text-xs space-y-2">
+            <li>
+              <b>Aproveitamento de Centralidade</b>: O distrito apresenta um índice de centralidade de {topDistrict.central_norm?.toFixed(2)}, indicando uma região com {topDistrict.central_norm > 0.6 ? "altíssima maturidade comercial consolidada, com forte concorrência local, mas altíssimo potencial de conversão de leads" : "desenvolvimento comercial em consolidação, oferecendo menor custo de ocupação territorial e potencial pioneiro de captação de mercado"}.
+            </li>
+            <li>
+              <b>Perfil Demográfico do Negócio</b>: A idade média local ({topDistrict.id_media?.toFixed(1)} anos) sugere que as estratégias de comunicação visual, canais de marketing e mix de produtos/serviços devem ser desenhadas para atender ao perfil de público <b>{topDistrict.id_media >= 42 ? "Adulto-Sênior, valorizando acessibilidade física, atendimento de alta qualidade e conveniência" : "Jovem-Adulto, com forte apelo em canais digitais, agilidade no atendimento e flexibilidade operacional"}</b>.
+            </li>
+            <li>
+              <b>Decisão de Implantação</b>: O distrito de <b>{topDistrict.nm_dist}</b> qualifica-se como **RECOMENDADO** para prosseguimento dos estudos de viabilidade financeira e negociação de imóveis comerciais locais, dada a aderência global de <b>{topDistrict.UrbanScore?.toFixed(1)}%</b> em nossa análise determinística.
+            </li>
+          </ul>
+        </div>
+
+        {/* Rodapé / Assinatura Acadêmica */}
+        <div className="pt-12 flex items-center justify-between border-t border-border mt-12 text-[9px] font-mono text-muted-foreground">
+          <span>DOCUMENTO OFICIAL GERADO PELA PLATAFORMA URBANIS</span>
+          <span>SÃO PAULO, BRASIL</span>
+        </div>
+
+      </div>
+    </>
   );
 }
 
-function StatCard({ title, value, unit, icon: Icon, trend, primary }: any) {
+function StatCard({ title, value, unit, icon: Icon, trend, trendLabel, primary }: any) {
   return (
     <Card className={`relative overflow-hidden transition-fast group hover:border-primary/50 ${primary ? 'border-primary/30 bg-primary/5' : ''}`}>
       <CardContent className="pt-6">
-        <div className="flex items-center justify-between mb-4 print:mb-2">
+        <div className="flex items-start justify-between mb-4 print:mb-2">
           <div className={`p-2 rounded ${primary ? 'bg-primary text-white' : 'bg-muted text-muted-foreground group-hover:text-primary transition-fast'}`}>
             <Icon className="w-4 h-4" />
           </div>
-          <div className={`flex items-center gap-1 text-[10px] font-bold font-mono ${trend.startsWith('+') ? 'text-emerald-500' : 'text-red-500'} print:hidden`}>
-            <ArrowUpRight className={`w-3 h-3 ${trend.startsWith('+') ? '' : 'rotate-90'}`} />
-            {trend}
+          <div className="flex flex-col items-end print:hidden">
+            <div className={`flex items-center gap-0.5 text-[10px] font-bold font-mono ${trend.startsWith('+') ? 'text-emerald-500' : 'text-red-500'}`}>
+              <ArrowUpRight className={`w-3 h-3 ${trend.startsWith('+') ? '' : 'rotate-90'}`} />
+              {trend}
+            </div>
+            {trendLabel && (
+              <span className="text-[8px] font-mono text-muted-foreground uppercase tracking-wide opacity-80 mt-0.5 select-none">
+                {trendLabel}
+              </span>
+            )}
           </div>
         </div>
         <div>

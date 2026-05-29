@@ -24,7 +24,7 @@ interface Station {
 }
 
 export function ChoroplethMap() {
-  const { districts, theme, activeMapLayer, setActiveMapLayer, activeProjectId } = useUrbanStore();
+  const { districts, theme, activeMapLayer, setActiveMapLayer, activeProjectId, selectedDistrictName, setSelectedDistrictName } = useUrbanStore();
   const [geoData, setGeoData] = useState<any>(null);
   const [stations, setStations] = useState<Station[]>([]);
 
@@ -55,7 +55,7 @@ export function ChoroplethMap() {
         return getUrbanScoreColor(dData.UrbanScore || 0);
       case 'crime':
         const crimeValue = dData.n_crime || 0;
-        const crimeT = Math.min(1, crimeValue / 1200); 
+        const crimeT = Math.min(1, crimeValue / 1200);
         return `rgba(239, 68, 68, ${Math.max(0.2, crimeT)})`;
       case 'age':
         const ageValue = dData.id_media || 35;
@@ -73,13 +73,14 @@ export function ChoroplethMap() {
   const mapStyle = (feature: any) => {
     const districtName = feature.properties.ds_nome || feature.properties.NOME_DIST || "";
     const dData = districtMap.get(districtName.toUpperCase()) || districtMap.get(districtName);
+    const isSelected = selectedDistrictName && districtName.toUpperCase() === selectedDistrictName.toUpperCase();
 
     return {
       fillColor: getLayerColor(dData),
-      weight: 1,
+      weight: isSelected ? 3.5 : 1,
       opacity: 1,
-      color: theme === 'dark' ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
-      fillOpacity: activeMapLayer === 'mobility' ? 0.4 : 0.8,
+      color: isSelected ? "hsl(var(--primary))" : (theme === 'dark' ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"),
+      fillOpacity: isSelected ? 0.95 : (activeMapLayer === 'mobility' ? 0.4 : 0.8),
     };
   };
 
@@ -90,26 +91,33 @@ export function ChoroplethMap() {
     if (dData) {
       const score = dData.UrbanScore;
       layer.bindTooltip(
-        `<div style="font-family: 'DM Mono', monospace; font-size: 11px; padding: 4px;">
-          <b style="font-size: 12px; color: ${theme === 'dark' ? '#fff' : '#000'}">${dData.nm_dist}</b><br/>
-          <span style="opacity: 0.7">URBANSCORE:</span> <b style="color: ${getUrbanScoreColor(score || 0)}">${score?.toFixed(1)}</b><br/>
-          <hr style="margin: 4px 0; border: 0; border-top: 1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}" />
-          <span style="opacity: 0.7">FLUXO (Diário):</span> ${dData.n_mob ? Math.round(Math.exp(dData.n_mob) - 1) + 'k' : '0'}<br/>
-          <span style="opacity: 0.7">ESTAÇÕES:</span> ${dData.n_stations || 0}<br/>
-          <span style="opacity: 0.7">CRIME:</span> ${dData.n_crime || 0}
+        `<div style="font-family: 'DM Mono', monospace; font-size: 11px; padding: 6px; line-height: 1.5;">
+          <b style="font-size: 12.5px; color: ${theme === 'dark' ? '#fff' : '#000'}">${dData.nm_dist}</b><br/>
+          <span style="opacity: 0.7">URBANSCORE:</span> <b style="color: ${getUrbanScoreColor(score || 0)}">${score?.toFixed(1)}%</b><br/>
+          <hr style="margin: 6px 0; border: 0; border-top: 1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}" />
+          <span style="opacity: 0.7">ESTAÇÕES (Metrô/Trens):</span> <b>${dData.n_stations || 0}</b><br/>
+          <span style="opacity: 0.7">FLUXO DIÁRIO:</span> <b>${(dData.n_stations || 0) > 0 && dData.n_mob ? Math.round(Math.exp(dData.n_mob) - 1) + ' mil passageiros' : 'Sem fluxo ativo'}</b><br/>
+          <span style="opacity: 0.7">OCORRÊNCIAS (SSP/Ano):</span> <b>${dData.n_crime ? dData.n_crime + ' ocorrências' : 'Sem ocorrências'}</b>
         </div>`,
         { sticky: true, className: 'leaflet-custom-tooltip' }
       );
     }
 
     layer.on({
+      click: () => {
+        if (dData) {
+          setSelectedDistrictName(dData.nm_dist);
+        }
+      },
       mouseover: (e: any) => {
         const l = e.target;
-        l.setStyle({ fillOpacity: activeMapLayer === 'mobility' ? 0.6 : 1, weight: 2, color: "hsl(var(--primary))" });
+        const isSelected = selectedDistrictName && dData.nm_dist.toUpperCase() === selectedDistrictName.toUpperCase();
+        l.setStyle({ fillOpacity: isSelected ? 0.95 : (activeMapLayer === 'mobility' ? 0.6 : 1), weight: isSelected ? 4 : 2, color: "hsl(var(--primary))" });
       },
       mouseout: (e: any) => {
         const l = e.target;
-        l.setStyle({ fillOpacity: activeMapLayer === 'mobility' ? 0.4 : 0.8, weight: 1, color: theme === 'dark' ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" });
+        const isSelected = selectedDistrictName && dData.nm_dist.toUpperCase() === selectedDistrictName.toUpperCase();
+        l.setStyle({ fillOpacity: isSelected ? 0.95 : (activeMapLayer === 'mobility' ? 0.4 : 0.8), weight: isSelected ? 3.5 : 1, color: isSelected ? "hsl(var(--primary))" : (theme === 'dark' ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)") });
       },
     });
   };
@@ -122,12 +130,12 @@ export function ChoroplethMap() {
         key={`${theme}-${activeMapLayer}`}
         center={[-23.5505, -46.6333]}
         zoom={11}
-        style={{ width: "100%", height: "100%", background: theme === 'dark' ? "#101113" : "#f8fafc" }}
+        style={{ width: "100%", height: "100%", background: "transparent" }}
         zoomControl={false}
       >
         <TileLayer
           attribution='&copy; CARTO'
-          url={theme === 'dark' 
+          url={theme === 'dark'
             ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
           }
@@ -138,7 +146,7 @@ export function ChoroplethMap() {
           style={mapStyle}
           onEachFeature={onEachFeature}
         />
-        
+
         {/* MOBILITY DOTS (Pontinhos Azuis e Vermelhos) */}
         {activeMapLayer === 'mobility' && stations.map((st, i) => (
           <CircleMarker
@@ -152,7 +160,7 @@ export function ChoroplethMap() {
           >
             <LeafletTooltip sticky>
               <div className="font-mono text-[10px]">
-                <b className="uppercase">{st.name}</b><br/>
+                <b className="uppercase">{st.name}</b><br />
                 <span className="opacity-70">{st.type.toUpperCase()}</span>
               </div>
             </LeafletTooltip>
@@ -164,38 +172,38 @@ export function ChoroplethMap() {
 
       {/* Layer Switcher */}
       <div className="absolute top-6 right-6 z-[1000] flex flex-col gap-2">
-        <LayerButton 
-          active={activeMapLayer === 'score'} 
-          onClick={() => setActiveMapLayer('score')} 
-          icon={Target} 
-          label="UrbanScore" 
+        <LayerButton
+          active={activeMapLayer === 'score'}
+          onClick={() => setActiveMapLayer('score')}
+          icon={Target}
+          label="UrbanScore"
         />
-        <LayerButton 
-          active={activeMapLayer === 'mobility'} 
-          onClick={() => setActiveMapLayer('mobility')} 
-          icon={TrainFront} 
-          label="Mobilidade" 
+        <LayerButton
+          active={activeMapLayer === 'mobility'}
+          onClick={() => setActiveMapLayer('mobility')}
+          icon={TrainFront}
+          label="Mobilidade"
         />
-        <LayerButton 
-          active={activeMapLayer === 'crime'} 
-          onClick={() => setActiveMapLayer('crime')} 
-          icon={Shield} 
-          label="Criminalidade" 
+        <LayerButton
+          active={activeMapLayer === 'crime'}
+          onClick={() => setActiveMapLayer('crime')}
+          icon={Shield}
+          label="Criminalidade"
         />
-        <LayerButton 
-          active={activeMapLayer === 'age'} 
-          onClick={() => setActiveMapLayer('age')} 
-          icon={Users} 
-          label="Idade Média" 
+        <LayerButton
+          active={activeMapLayer === 'age'}
+          onClick={() => setActiveMapLayer('age')}
+          icon={Users}
+          label="Idade Média"
         />
       </div>
-      
+
       {/* Dynamic Legend */}
       <div className="absolute bottom-6 right-6 bg-card p-5 rounded-lg border border-border z-[1000] min-w-[200px] transition-fast shadow-xl">
         <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest mb-4">
           {activeMapLayer === 'mobility' ? 'Infraestrutura Metroferroviária' : 'Escala Territorial'}
         </p>
-        
+
         {activeMapLayer === 'mobility' ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -214,7 +222,7 @@ export function ChoroplethMap() {
         ) : (
           <div className="flex gap-4">
             <div className="h-32 w-5 rounded-sm" style={{
-              background: activeMapLayer === 'score' 
+              background: activeMapLayer === 'score'
                 ? "linear-gradient(to top, #dc2626, #ea580c, #eab308, #22c55e, #166534)"
                 : activeMapLayer === 'crime'
                   ? "linear-gradient(to top, #fee2e2, #ef4444, #991b1b)"
@@ -268,13 +276,12 @@ function MapControls() {
 
 function LayerButton({ active, onClick, icon: Icon, label }: any) {
   return (
-    <button 
+    <button
       onClick={onClick}
-      className={`h-10 px-4 rounded-md border flex items-center gap-3 transition-fast shadow-sm ${
-        active 
-          ? 'bg-primary border-primary text-white' 
+      className={`h-10 px-4 rounded-md border flex items-center gap-3 transition-fast shadow-sm ${active
+          ? 'bg-primary border-primary text-white'
           : 'bg-card border-border text-muted-foreground hover:border-primary/50'
-      }`}
+        }`}
     >
       <Icon className="w-4 h-4" />
       <span className="text-[10px] font-mono font-bold uppercase tracking-widest">{label}</span>

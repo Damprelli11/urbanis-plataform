@@ -47,7 +47,7 @@ const DEFAULT_PROJECTS: Project[] = [
     name: "Estudo de Aderência — Drogaria Popular Centro",
     segment: "Farmácia Popular",
     profile: "pharmacy-popular",
-    strategicGoal: "Capilaridade e Proximidade Residencial em São Paulo"
+    strategicGoal: "Focar em bairros residenciais (Conveniência)"
   }
 ];
 
@@ -57,6 +57,7 @@ interface UrbanStore {
   districts: DistrictData[];
   theme: 'dark' | 'light';
   activeMapLayer: 'score' | 'crime' | 'age' | 'mobility';
+  selectedDistrictName: string | null;
   
   // Authentication & Supabase States
   user: User | null;
@@ -74,6 +75,7 @@ interface UrbanStore {
   createProject: (project: Omit<Project, 'id'>) => Promise<void>;
   updateProject: (id: string, project: Omit<Project, 'id'>) => Promise<void>;
   selectProject: (id: string) => void;
+  setSelectedDistrictName: (name: string | null) => void;
   deleteProject: (id: string) => Promise<void>;
   setActiveMapLayer: (layer: 'score' | 'crime' | 'age' | 'mobility') => void;
   calculateScores: () => void;
@@ -116,6 +118,8 @@ export const useUrbanStore = create<UrbanStore>((set, get) => ({
   districts: [],
   theme: (localStorage.getItem('urbanis-theme') as 'dark' | 'light') || 'dark',
   activeMapLayer: 'score',
+  selectedDistrictName: null,
+  setSelectedDistrictName: (name) => set({ selectedDistrictName: name }),
 
   // Authentication & Supabase state initializations
   user: null,
@@ -384,7 +388,7 @@ export const useUrbanStore = create<UrbanStore>((set, get) => ({
   selectProject: (id) => {
     if (!get().projects.some(p => p.id === id)) return;
     localStorage.setItem('urbanis-active-project-id', id);
-    set({ activeProjectId: id });
+    set({ activeProjectId: id, selectedDistrictName: null });
     get().calculateScores();
   },
 
