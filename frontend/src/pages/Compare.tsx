@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useUrbanStore } from "@/store/useUrbanStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { ChevronRight, ArrowLeftRight, Download, TrainFront } from "lucide-react";
+import { ChevronRight, ArrowLeftRight, Download, TrainFront, Search, ChevronDown } from "lucide-react";
 import { getUrbanScoreColor } from "@/lib/colors";
 import {
   BarChart,
@@ -14,12 +14,125 @@ import {
   ResponsiveContainer
 } from "recharts";
 
+interface DistrictData {
+  nm_dist: string;
+  [key: string]: any;
+}
+
+function SearchableSelect({ value, onChange, options, label, color, textRight = false }: {
+  value: string;
+  onChange: (val: string) => void;
+  options: DistrictData[];
+  label: string;
+  color: string;
+  textRight?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const sortedOptions = [...options].sort((a, b) => a.nm_dist.localeCompare(b.nm_dist));
+
+  const filteredOptions = sortedOptions.filter(d => 
+    d.nm_dist.toLowerCase().includes(search.toLowerCase())
+  );
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative w-full text-left" ref={dropdownRef}>
+      <label className={`text-[10px] font-mono font-bold uppercase tracking-[0.2em] mb-3 block px-1 ${textRight ? "text-right" : "text-left"}`} style={{ color }}>
+        {label}
+      </label>
+      
+      <button
+        type="button"
+        onClick={() => {
+          setIsOpen(!isOpen);
+          setSearch("");
+        }}
+        className="w-full h-14 px-4 bg-background border rounded-lg text-lg font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-fast flex items-center justify-between shadow-sm cursor-pointer"
+        style={{ 
+          borderColor: `${color}4D`,
+          textAlign: textRight ? 'right' : 'left',
+          flexDirection: textRight ? 'row-reverse' : 'row'
+        }}
+      >
+        <span>{value}</span>
+        <ChevronDown className="w-5 h-5 opacity-60 transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }} />
+      </button>
+
+      {isOpen && (
+        <div 
+          className="absolute z-50 mt-2 w-full bg-card border border-border/80 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
+        >
+          <div className="p-3 border-b border-border/60 bg-muted/20 flex items-center gap-2">
+            <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Digite para filtrar..."
+              className="w-full bg-transparent border-none text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-0"
+              autoFocus
+            />
+          </div>
+
+          <ul className="max-h-60 overflow-y-auto py-1 divide-y divide-border/20">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map(d => {
+                const isSelected = d.nm_dist === value;
+                return (
+                  <li key={d.nm_dist}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onChange(d.nm_dist);
+                        setIsOpen(false);
+                      }}
+                      className={`w-full px-4 py-3 text-left text-sm font-semibold transition-fast flex items-center justify-between hover:bg-primary/5 ${
+                        isSelected ? 'bg-primary/10 text-primary font-bold' : 'text-foreground'
+                      }`}
+                      style={{
+                        flexDirection: textRight ? 'row-reverse' : 'row'
+                      }}
+                    >
+                      <span>{d.nm_dist}</span>
+                      {isSelected && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      )}
+                    </button>
+                  </li>
+                );
+              })
+            ) : (
+              <li className="px-4 py-4 text-xs font-semibold text-muted-foreground text-center">
+                Nenhum distrito encontrado
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Compare() {
   const { districts, activeProjectId, projects } = useUrbanStore();
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
   
-  const [distA, setDistA] = useState<string>(districts[0]?.nm_dist || "");
-  const [distB, setDistB] = useState<string>(districts[1]?.nm_dist || "");
+  const sortedDistricts = [...districts].sort((a, b) => a.nm_dist.localeCompare(b.nm_dist));
+  
+  const [distA, setDistA] = useState<string>(() => sortedDistricts[0]?.nm_dist || "");
+  const [distB, setDistB] = useState<string>(() => sortedDistricts[1]?.nm_dist || "");
 
   if (!districts.length) return null;
 
@@ -80,33 +193,32 @@ export function Compare() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-center">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
         <div className="lg:col-span-2">
-          <label className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[#C0192B] mb-3 block px-1">Distrito Principal</label>
-          <select 
-            value={distA} 
-            onChange={e => setDistA(e.target.value)}
-            className="w-full h-14 px-4 bg-background border border-[#C0192B]/30 rounded-lg text-lg font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-[#C0192B]/50 transition-fast cursor-pointer appearance-none"
-          >
-            {districts.map(d => <option key={`A-${d.nm_dist}`} value={d.nm_dist}>{d.nm_dist}</option>)}
-          </select>
+          <SearchableSelect
+            value={distA}
+            onChange={setDistA}
+            options={districts}
+            label="Distrito Principal"
+            color="#C0192B"
+          />
         </div>
         
-        <div className="flex justify-center pt-6">
+        <div className="flex justify-center pb-1">
           <div className="h-12 w-12 rounded-full border border-border bg-card flex items-center justify-center text-muted-foreground shadow-sm">
             <ArrowLeftRight className="w-5 h-5" />
           </div>
         </div>
 
         <div className="lg:col-span-2">
-          <label className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[#4F46E5] mb-3 block px-1 text-right">Distrito Secundário</label>
-          <select 
-            value={distB} 
-            onChange={e => setDistB(e.target.value)}
-            className="w-full h-14 px-4 bg-background border border-[#4F46E5]/30 rounded-lg text-lg font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/50 transition-fast cursor-pointer appearance-none text-right"
-          >
-            {districts.map(d => <option key={`B-${d.nm_dist}`} value={d.nm_dist}>{d.nm_dist}</option>)}
-          </select>
+          <SearchableSelect
+            value={distB}
+            onChange={setDistB}
+            options={districts}
+            label="Distrito Secundário"
+            color="#4F46E5"
+            textRight={true}
+          />
         </div>
       </div>
 
